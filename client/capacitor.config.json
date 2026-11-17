@@ -1,0 +1,9 @@
+{
+  "appId": "com.calcchat.app",
+  "appName": "Calculator",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  }
+}
