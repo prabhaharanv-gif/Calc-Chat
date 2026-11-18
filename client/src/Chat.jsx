@@ -18,7 +18,7 @@ function timeLeft(ms) {
   return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`;
 }
 
-export default function Chat({ role, code, secret, title, onBack, onLock }) {
+export default function Chat({ role, code, secret, title, onBack, onLock, theme, onTheme }) {
   const [msgs, setMsgs] = useState([]);
   const [text, setText] = useState('');
   const [status, setStatus] = useState('connecting');
@@ -152,6 +152,7 @@ export default function Chat({ role, code, secret, title, onBack, onLock }) {
         <button className="ghost codechip" onClick={copyCode} title="Tap to copy code">
           {copied ? 'Copied ✓' : code}
         </button>
+        <button className="ghost" onClick={onTheme} title="Light / dark">{theme === 'dark' ? '☀️' : '🌙'}</button>
         <button className="ghost" onClick={clearChat} title="Clear chat for both">🗑</button>
         <button className="ghost" onClick={onLock}>🔒</button>
       </header>

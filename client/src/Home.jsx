@@ -11,7 +11,7 @@ const JOIN_ERRORS = {
   bad_code: 'Code looks wrong (8 letters/numbers).',
 };
 
-export default function Home({ profile, update, onLock }) {
+export default function Home({ profile, update, onLock, theme, onTheme }) {
   const [view, setView] = useState(null); // null | 'owner' | 'guest'
   const [joinInput, setJoinInput] = useState('');
   const [msg, setMsg] = useState('');
@@ -68,18 +68,22 @@ export default function Home({ profile, update, onLock }) {
 
   if (view === 'owner') {
     return <Chat role="owner" code={profile.ownCode} secret={profile.ownSecret} title="My chat"
-      onBack={() => setView(null)} onLock={onLock} />;
+      onBack={() => setView(null)} onLock={onLock} theme={theme} onTheme={onTheme} />;
   }
   if (view === 'guest' && profile.joined) {
     return <Chat role="guest" code={profile.joined.code} secret={profile.joined.secret}
-      title={`Chat ${profile.joined.code}`} onBack={() => setView(null)} onLock={onLock} />;
+      title={`Chat ${profile.joined.code}`} onBack={() => setView(null)} onLock={onLock}
+      theme={theme} onTheme={onTheme} />;
   }
 
   return (
     <div className="page">
       <header className="bar">
         <span>Private Chat</span>
-        <button className="ghost" onClick={onLock}>🔒 Lock</button>
+        <div className="row">
+          <button className="ghost" onClick={onTheme} title="Light / dark">{theme === 'dark' ? '☀️' : '🌙'}</button>
+          <button className="ghost" onClick={onLock}>🔒 Lock</button>
+        </div>
       </header>
       <div className="home">
         <section className="card">

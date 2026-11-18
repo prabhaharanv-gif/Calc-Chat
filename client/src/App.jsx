@@ -14,6 +14,12 @@ export default function App() {
 
   const update = useCallback((patch) => setProfile(save(patch)), []);
 
+  // Light/dark theme: saved choice, else follow the phone's setting.
+  const theme = profile.theme
+    || (window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
+  const toggleTheme = useCallback(() => update({ theme: theme === 'dark' ? 'light' : 'dark' }), [theme, update]);
+
   // Delete all messages of every chat this device is part of (both sides).
   const wipeAll = useCallback(async () => {
     const p = load();
@@ -57,7 +63,7 @@ export default function App() {
   let screen;
   if (!profile.passHash) screen = <Setup onDone={update} />;
   else if (!unlocked) screen = <Calculator onCode={onCode} />;
-  else screen = <Home profile={profile} update={update} onLock={() => setUnlocked(false)} />;
+  else screen = <Home profile={profile} update={update} onLock={() => setUnlocked(false)} theme={theme} onTheme={toggleTheme} />;
 
   return (
     <>
