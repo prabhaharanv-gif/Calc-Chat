@@ -111,7 +111,7 @@ export default function Snake({ onCode, passLen, signal }) {
         <div className="sboard" onPointerDown={swDown} onPointerUp={swUp}>
           <canvas ref={canvas} width={COLS * CELL} height={ROWS * CELL} />
           {pinOpen && <PinPad passLen={passLen} onCode={onCode} onClose={() => setPinOpen(false)} />}
-          {!running && !g.over && <div className="sover"><b>Tap or press an arrow key to start</b></div>}
+          {!running && !g.over && <div className="sover start"><b>Tap or press an arrow key to start</b></div>}
           {g.over && (
             <div className="sover">
               <h2>{g.won ? 'You win!' : 'Game over!'}</h2>
