@@ -1,6 +1,6 @@
 {
   "appId": "com.calcchat.app",
-  "appName": "Snake & 2048",
+  "appName": "Mini Games",
   "webDir": "dist",
   "android": {
     "allowMixedContent": false,

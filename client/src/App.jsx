@@ -1,7 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import Calculator from './Calculator.jsx';
-import Game2048 from './Game2048.jsx';
-import Snake from './Snake.jsx';
+import Games from './Games.jsx';
 import Setup from './Setup.jsx';
 import Home from './Home.jsx';
 import { post } from './api.js';
@@ -89,10 +87,10 @@ export default function App() {
     return () => window.removeEventListener('online', retry);
   }, [wipeAll]);
 
-  // Called by the calculator when a digits-only entry is submitted with "=".
+  // Called by the hidden PIN pad (opened by holding a game title for 3 seconds).
   const onCode = useCallback(async (digits, opts) => {
     const p = load();
-    // The calculator only treats a passcode-length entry as an attempt; the game's PIN pad always does.
+    // Every PIN-pad submit counts as an attempt; wrong ones are tallied and 3 in a row wipe the chats.
     if (digits.length !== p.passLen && !opts?.explicit) return 'ignore';
     if (sha256(`${p.salt}:${digits}`) === p.passHash) {
       save({ fails: 0 });
@@ -110,9 +108,7 @@ export default function App() {
   let screen;
   if (!profile.passHash) screen = <Setup onDone={update} />;
   else if (!unlocked) {
-    if (profile.mode === 'game') screen = <Game2048 onCode={onCode} passLen={profile.passLen} signal={signal} />;
-    else if (profile.mode === 'snake') screen = <Snake onCode={onCode} passLen={profile.passLen} signal={signal} />;
-    else screen = <Calculator onCode={onCode} signal={signal} />;
+    screen = <Games onCode={onCode} passLen={profile.passLen} signal={signal} />;
   } else {
     screen = (
       <Home profile={profile} update={update} onLock={() => setUnlocked(false)} theme={theme} onTheme={toggleTheme}

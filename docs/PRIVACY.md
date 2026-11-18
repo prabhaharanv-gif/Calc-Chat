@@ -2,7 +2,7 @@
 
 Last updated: [DATE]
 
-**What the app is.** A private two-person chat. The app is presented as a 2048 game (or a calculator); a passcode set by you opens the chat.
+**What the app is.** A private two-person chat. The app is presented as a collection of mini games; a passcode set by you opens the chat.
 
 **Accounts.** None. We do not ask for your name, phone number or email.
 

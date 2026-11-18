@@ -4,7 +4,6 @@ import Icon from './Icon.jsx';
 import { post } from './api.js';
 import { randomCode, randomSecret } from './storage.js';
 import { getIdentity } from './identity.js';
-import { MODES } from './Setup.jsx';
 
 const JOIN_ERRORS = {
   not_found: 'Code not found. Ask your friend to open the app once, then try again.',
@@ -49,7 +48,6 @@ export default function Home({ profile, update, onLock, theme, onTheme, activeRo
   const [editing, setEditing] = useState(!profile.name); // ask for a name if none is set yet
   const [nameDraft, setNameDraft] = useState(profile.name || '');
   const timer = useRef(null);
-  const frontMode = MODES.some((m) => m.id === profile.mode) ? profile.mode : 'calc';
 
   const flash = useCallback((text, err = false) => {
     clearTimeout(timer.current);
@@ -70,11 +68,6 @@ export default function Home({ profile, update, onLock, theme, onTheme, activeRo
 
   const signalOn = profile.notify !== false;
   const toggleSignal = () => update({ notify: !signalOn });
-  const signalHint = {
-    snake: 'The "Snake" title turns green when a message is waiting (maroon = none).',
-    game: 'The "2048" title turns green when a message is waiting (maroon = none).',
-    calc: 'The calculator display turns green when a message is waiting.',
-  };
 
   const host = useCallback(async () => {
     try {
@@ -238,14 +231,10 @@ export default function Home({ profile, update, onLock, theme, onTheme, activeRo
               </section>
 
               <section className="hm-group">
-                <h4>Front screen</h4>
-                <div className="hm-row col">
-                  <div className="seg">
-                    {MODES.map((m) => (
-                      <button key={m.id} className={frontMode === m.id ? 'on' : ''} onClick={() => update({ mode: m.id })}>{m.label}</button>
-                    ))}
-                  </div>
-                  <div className="hm-cap">{MODES.find((m) => m.id === frontMode).how}</div>
+                <h4>Open the chat</h4>
+                <div className="hm-row">
+                  <span className="hm-pi"><Icon name="grid" size={16} /></span>
+                  <span className="hm-v">Hold any game title for 3 seconds, then enter your passcode</span>
                 </div>
               </section>
 
@@ -254,7 +243,7 @@ export default function Home({ profile, update, onLock, theme, onTheme, activeRo
                 <div className="hm-row">
                   <span className="hm-pi"><Icon name="message" size={16} /></span>
                   <span className="hm-v grow">Secret signal
-                    <small>{signalHint[frontMode]}</small>
+                    <small>Every game title turns green when a message is waiting (maroon = none).</small>
                   </span>
                   <button className={`hm-switch ${signalOn ? 'on' : ''}`} onClick={toggleSignal}
                     role="switch" aria-checked={signalOn} aria-label="Secret message signal" />

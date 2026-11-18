@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { newGame, play } from './game2048.js';
-import PinPad, { useLongPress } from './PinPad.jsx';
+import PinPad from './PinPad.jsx';
+import GameHeader, { Scores } from './GameHeader.jsx';
 
 const KEYS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', a: 'left', d: 'right', w: 'up', s: 'down' };
 const readBest = () => { try { return Number(localStorage.getItem('g2048_best')) || 0; } catch { return 0; } };
 
-export default function Game2048({ onCode, passLen, signal }) {
+export default function Game2048({ onCode, passLen, signal, onBack }) {
   const [game, setGame] = useState(newGame);
   const [best, setBest] = useState(readBest);
   const [keepGoing, setKeepGoing] = useState(false);
   const [pinOpen, setPinOpen] = useState(false);
   const swipe = useRef(null);
-  const longPress = useLongPress(() => setPinOpen(true));
 
   useEffect(() => {
     if (game.score > best) {
@@ -49,13 +49,8 @@ export default function Game2048({ onCode, passLen, signal }) {
   return (
     <div className="gamewrap">
       <div className="game">
-        <div className="ghead">
-          <h1 className={`gtitle ${signal ? 'sig' : ''}`} {...longPress}>2048</h1>
-          <div className="gscores">
-            <div className="gscore"><span>SCORE</span><b>{game.score}</b></div>
-            <div className="gscore"><span>BEST</span><b>{best}</b></div>
-          </div>
-        </div>
+        <GameHeader title="2048" signal={signal} onBack={onBack} onPin={() => setPinOpen(true)}
+          right={<Scores items={[['SCORE', game.score], ['BEST', best]]} />} />
         <div className="gbar">
           <p>Join the numbers and get to the <b>2048 tile!</b></p>
           <button className="gbtn" onClick={restart}>New Game</button>

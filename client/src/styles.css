@@ -405,6 +405,73 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .calc .display .main { transition: color .5s ease; }
 .calc .display .main.sig { color: #2fb457; }
 .hm-v small { display: block; margin-top: 2px; font-weight: 400; font-size: .74rem; line-height: 1.3; color: var(--muted); }
+
+/* ===== Games hub + shared game chrome ===== */
+.ghead { flex-wrap: wrap; row-gap: 8px; }
+.gleft { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ghead .gtitle { font-size: 2.3rem; }
+.gback { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex: none; background: rgba(127,127,127,.2); color: inherit; }
+.gback:active { transform: scale(.94); }
+
+/* neutral (theme-aware) game pages: Memory, Tic Tac Toe, Mines, Slide, hub */
+:root[data-theme] .gamewrap.themed { background: var(--home-bg); color: var(--text); }
+.themed .gscore { background: var(--glass); border: 1px solid var(--glass-b); color: var(--text); }
+.themed .gscore span { color: var(--muted); }
+.themed .gbtn { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; }
+.themed .gbar p { color: var(--muted); }
+.gbox { position: relative; overflow: hidden; border-radius: 18px; background: var(--glass); border: 1px solid var(--glass-b); }
+.gbox .gover { background: rgba(12,10,16,.72); color: #fff; border-radius: inherit; }
+.gbox .gover .gbtn { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; }
+
+.hubsub { margin: -4px 0 6px; color: var(--muted); font-size: .9rem; }
+.hubgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.hubgrid.three { grid-template-columns: repeat(3, 1fr); }
+.htile { position: relative; overflow: hidden; aspect-ratio: 1.08 / 1; border-radius: 26px; padding: 14px 16px; text-align: left; color: #fff;
+  display: flex; align-items: flex-end; background: linear-gradient(145deg, var(--a), var(--b)); box-shadow: 0 18px 30px -18px var(--b); transition: transform .15s; }
+.htile::before { content: ''; position: absolute; inset: 0; background: radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,.28), transparent 55%); pointer-events: none; }
+.htile:active { transform: scale(.96); }
+.hicon { position: absolute; top: 14px; right: 14px; display: grid; opacity: .98; filter: drop-shadow(0 6px 8px rgba(0,0,0,.25)); }
+.hname { position: relative; font: 700 1.25rem/1.1 'Baloo 2 Variable', 'Inter Variable', system-ui, sans-serif; text-shadow: 0 2px 8px rgba(0,0,0,.25); }
+.pinfull { position: fixed; inset: 0; z-index: 70; background: rgba(8,8,12,.5); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.pinfull .pinwrap { --pb: 66px; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.pinfull .pinpad { padding: 26px 22px; border-radius: 30px; gap: 22px; background: linear-gradient(160deg, rgba(44,46,52,.97), rgba(20,22,26,.97)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+
+/* Memory */
+.memboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px; aspect-ratio: 1; perspective: 900px; }
+.mcard { position: relative; border-radius: 14px; transform-style: preserve-3d; transition: transform .35s; padding: 0; }
+.mcard.up { transform: rotateY(180deg); }
+.mface { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 14px; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.mfront { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: rgba(255,255,255,.9); font: 700 1.8rem 'Baloo 2 Variable', sans-serif; }
+.mback { transform: rotateY(180deg); background: var(--surface); border: 1px solid var(--glass-b); font-size: clamp(1.6rem, 9vw, 2.4rem); }
+.mcard.done .mback { background: var(--glow-soft); border-color: var(--accent); }
+
+/* Tic Tac Toe */
+.tboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; aspect-ratio: 1; }
+.tcell { border-radius: 18px; background: var(--surface); border: 1px solid var(--glass-b); color: var(--text); padding: 0;
+  font: 700 clamp(2.6rem, 16vw, 4.2rem)/1 'Baloo 2 Variable', 'Inter Variable', sans-serif; }
+.tcell:active { transform: scale(.96); }
+.tcell.mX { color: var(--accent); }
+.tcell.mO { color: #2fb457; }
+.tstatus { font-weight: 600; }
+
+/* Mines */
+.mboard { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 3px; padding: 6px; aspect-ratio: 1; }
+.mcell { border-radius: 7px; padding: 0; display: grid; place-items: center; font: 700 clamp(.9rem, 4.6vw, 1.35rem) 'Baloo 2 Variable', 'Inter Variable', sans-serif;
+  background: linear-gradient(160deg, var(--surface), var(--surface2)); border: 1px solid var(--glass-b); color: var(--text); }
+.mcell.open { background: var(--home-bg); border-color: transparent; box-shadow: inset 0 0 0 1px var(--glass-b); }
+.mcell.boom { background: #ff453a66; }
+.mcell.n1 { color: #3b82f6; } .mcell.n2 { color: #22a35a; } .mcell.n3 { color: #e5484d; } .mcell.n4 { color: #7c3aed; }
+.mcell.n5 { color: #d97706; } .mcell.n6 { color: #0891b2; } .mcell.n7 { color: #111; } .mcell.n8 { color: #6b7280; }
+.seg.mode { width: auto; min-width: 190px; }
+.seg.mode button { padding: 8px 12px; font-size: .85rem; }
+
+/* Slide */
+.sboard2 { aspect-ratio: 1; }
+.stile { position: absolute; left: 0; top: 0; width: 25%; height: 25%; padding: 4px; transition: transform .16s ease; }
+.stile span { width: 100%; height: 100%; display: grid; place-items: center; border-radius: 14px; color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 8px 16px -10px var(--glow);
+  font: 700 clamp(1.4rem, 8vw, 2.1rem)/1 'Baloo 2 Variable', 'Inter Variable', sans-serif; }
+.stile:active span { filter: brightness(1.15); }
 .icon.off, .icon:disabled { opacity: .45; cursor: not-allowed; }
 .composer input:disabled { opacity: .6; }
 .infopop { left: 12px; top: 66px; width: min(300px, calc(100vw - 24px)); padding: 14px; gap: 6px; }

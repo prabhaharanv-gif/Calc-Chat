@@ -1,18 +1,19 @@
 # Play Store listing (draft)
 
-**Title (30):** Snake & 2048 + Private Chat
-**Short description (80):** Snake and 2048 games with a hidden, end-to-end encrypted private chat.
+**Title (30):** Mini Games + Private Chat
+**Short description (80):** Six classic games with a hidden, end-to-end encrypted private chat.
 
 **Full description**
-Play classic Snake or the 2048 number puzzle. Hold the game title for 3 seconds, enter your secret PIN, and a private chat opens.
+Play six classic mini games: Snake, 2048, Memory, Tic Tac Toe, Mines and Slide puzzle. Hold a game title for 3 seconds, enter your secret PIN, and a private chat opens.
 
-NOTE: This app is a private messenger hidden behind a game. The chat stays hidden until you enter your PIN. You can also choose a calculator as the front screen.
+NOTE: This app is a private messenger hidden inside a games app. The chat stays hidden until you enter your PIN.
 
 - No sign-up, no phone number, no email
 - Every user gets a personal code; share it with one friend to start a one-to-one chat
 - End-to-end encrypted text, photos, voice messages and videos
 - Messages and media auto-delete after 4 hours and are never stored in a database
 - Clear the chat for both people at any time; delete, reply, edit and react to messages
+- A discreet colour signal on the game titles tells you when a message is waiting
 - 3 wrong PIN attempts erase your chats
 - Screenshots and screen recording are blocked
 

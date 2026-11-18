@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { COLS, ROWS, newState, step } from './snake.js';
-import PinPad, { useLongPress } from './PinPad.jsx';
+import PinPad from './PinPad.jsx';
+import GameHeader, { Scores } from './GameHeader.jsx';
 
 const CELL = 22; // canvas pixels per cell
 const KEYS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', a: 'left', d: 'right', w: 'up', s: 'down' };
@@ -41,7 +42,7 @@ function draw(canvas, g) {
   }
 }
 
-export default function Snake({ onCode, passLen, signal }) {
+export default function Snake({ onCode, passLen, signal, onBack }) {
   const [g, setG] = useState(() => newState());
   const [running, setRunning] = useState(false);
   const [best, setBest] = useState(readBest);
@@ -49,7 +50,6 @@ export default function Snake({ onCode, passLen, signal }) {
   const canvas = useRef(null);
   const inputs = useRef([]); // queued turns, so two quick swipes are not lost
   const swipe = useRef(null);
-  const longPress = useLongPress(() => setPinOpen(true));
   const speed = Math.max(70, 140 - Math.floor(g.score / 50) * 10);
 
   const turn = useCallback((d) => {
@@ -100,13 +100,8 @@ export default function Snake({ onCode, passLen, signal }) {
   return (
     <div className="gamewrap snakewrap">
       <div className="game">
-        <div className="ghead">
-          <h1 className={`gtitle ${signal ? 'sig' : ''}`} {...longPress}>Snake</h1>
-          <div className="gscores">
-            <div className="gscore"><span>SCORE</span><b>{g.score}</b></div>
-            <div className="gscore"><span>BEST</span><b>{best}</b></div>
-          </div>
-        </div>
+        <GameHeader title="Snake" signal={signal} onBack={onBack} onPin={() => setPinOpen(true)}
+          right={<Scores items={[['SCORE', g.score], ['BEST', best]]} />} />
 
         <div className="sboard" onPointerDown={swDown} onPointerUp={swUp}>
           <canvas ref={canvas} width={COLS * CELL} height={ROWS * CELL} />
