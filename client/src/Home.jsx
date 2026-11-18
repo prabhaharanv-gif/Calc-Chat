@@ -31,6 +31,16 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(!profile.name); // ask for a name if none is set yet
+  const [nameDraft, setNameDraft] = useState(profile.name || '');
+
+  const saveName = (e) => {
+    e.preventDefault();
+    const n = nameDraft.trim().slice(0, 24);
+    if (!n) return;
+    update({ name: n });
+    setEditing(false);
+  };
 
   const host = useCallback(async () => {
     try {
@@ -81,12 +91,12 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
   };
 
   if (view === 'owner') {
-    return <Chat role="owner" code={profile.ownCode} secret={profile.ownSecret} title="You"
+    return <Chat role="owner" code={profile.ownCode} secret={profile.ownSecret} name={profile.name}
       onBack={() => setView(null)} onLock={onLock} theme={theme} onTheme={onTheme} />;
   }
   if (view === 'guest' && profile.joined) {
     return <Chat role="guest" code={profile.joined.code} secret={profile.joined.secret}
-      title="Friend" onBack={() => setView(null)} onLock={onLock} theme={theme} onTheme={onTheme} />;
+      name={profile.name} onBack={() => setView(null)} onLock={onLock} theme={theme} onTheme={onTheme} />;
   }
 
   return (
@@ -105,6 +115,27 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
       </header>
 
       <div className="home">
+        <section className="me">
+          <div className="grow">
+            <div className="muted small">Your name</div>
+            {editing ? (
+              <form className="namerow" onSubmit={saveName}>
+                <input autoFocus value={nameDraft} maxLength={24} placeholder="Enter your name"
+                  onChange={(e) => setNameDraft(e.target.value)} />
+                <button className="primary">Save</button>
+              </form>
+            ) : (
+              <div className="myname">{profile.name}</div>
+            )}
+          </div>
+          {!editing && (
+            <button className="iconbtn" aria-label="Edit name"
+              onClick={() => { setNameDraft(profile.name || ''); setEditing(true); }}>
+              <Icon name="edit" size={18} />
+            </button>
+          )}
+        </section>
+
         <section className="hero">
           <div className="eyebrow">Your private code</div>
           <Tiles code={profile.ownCode} />

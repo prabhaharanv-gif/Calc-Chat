@@ -57,10 +57,24 @@ const io = new Server(server, {
   pingTimeout: 60000,
 });
 
+const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+const LABELS = { image: 'Photo', video: 'Video', audio: 'Voice message', file: 'File' };
+const snippet = (m) => (m.type === 'text' ? m.text.slice(0, 100) : LABELS[m.type] || 'Message');
+
+// Display names are optional, kept in RAM only, and shown to the other person.
+const cleanName = (n) => String(n || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 24);
+
 async function presence(code) {
+  const room = rooms.get(code);
+  if (!room) return;
   const socks = await io.in(code).fetchSockets();
   const roles = new Set(socks.map((s) => s.data.role));
-  io.to(code).emit('presence', { owner: roles.has('owner'), guest: roles.has('guest') });
+  io.to(code).emit('presence', {
+    owner: roles.has('owner'),
+    guest: roles.has('guest'),
+    ownerName: room.names.owner,
+    guestName: room.names.guest,
+  });
 }
 
 // Owner registers (or re-registers after a server restart) their room.
@@ -70,7 +84,7 @@ app.post('/api/host', (req, res) => {
   if (!validCode(code) || !validSecret(secret)) return res.status(400).json({ error: 'bad_request' });
   let room = rooms.get(code);
   if (!room) {
-    room = { ownerHash: sha(secret), guestHash: null, messages: [], touched: Date.now() };
+    room = { ownerHash: sha(secret), guestHash: null, messages: [], names: { owner: '', guest: '' }, touched: Date.now() };
     rooms.set(code, room);
   } else if (!same(room.ownerHash, sha(secret))) {
     return res.status(403).json({ error: 'forbidden' });
@@ -123,6 +137,7 @@ app.post('/api/close', async (req, res) => {
     rooms.delete(code);
   } else {
     room.guestHash = null;
+    room.names.guest = '';
     room.messages = [];
     io.to(code).emit('cleared');
     for (const s of await io.in(code).fetchSockets()) if (s.data.role === 'guest') s.disconnect(true);
@@ -132,13 +147,15 @@ app.post('/api/close', async (req, res) => {
 });
 
 io.use((socket, next) => {
-  const { code, secret } = socket.handshake.auth || {};
+  const { code, secret, name } = socket.handshake.auth || {};
   if (!validCode(code) || !validSecret(secret)) return next(new Error('bad_auth'));
   const room = rooms.get(code);
   if (!room) return next(new Error('no_room'));
   const role = roleOf(room, secret);
   if (!role) return next(new Error('forbidden'));
   socket.data = { code, role };
+  const n = cleanName(name);
+  if (n) room.names[role] = n;
   next();
 });
 
@@ -167,6 +184,11 @@ io.on('connection', (socket) => {
       if (type !== 'file' && !mime.startsWith(type + '/')) return ack?.({ ok: false, error: 'mime' });
       Object.assign(msg, { data, mime, name: String(m.name || '').slice(0, 100), duration: Number(m.duration) || 0 });
     }
+    msg.reactions = {};
+    if (typeof m.replyTo === 'string') {
+      const ref = r.messages.find((x) => x.id === m.replyTo);
+      if (ref) msg.replyTo = { id: ref.id, from: ref.from, text: snippet(ref) };
+    }
     r.messages.push(msg);
     r.touched = now;
     let bytes = r.messages.reduce((n, x) => n + (x.data?.length || 0), 0);
@@ -175,6 +197,49 @@ io.on('connection', (socket) => {
     }
     io.to(code).emit('message', msg);
     ack?.({ ok: true });
+  });
+
+  const findMsg = (id) => rooms.get(code)?.messages.find((x) => x.id === id);
+  // Keep quoted previews in replies in sync when the original is edited/deleted.
+  const refreshQuotes = (r, id, text) => {
+    for (const x of r.messages) {
+      if (x.replyTo?.id === id) {
+        x.replyTo.text = text;
+        io.to(code).emit('update', { id: x.id, replyTo: x.replyTo });
+      }
+    }
+  };
+
+  // One reaction per person per message; same emoji again removes it.
+  socket.on('react', (p) => {
+    const msg = findMsg(p?.id);
+    if (!msg || !REACTIONS.includes(p.emoji)) return;
+    if (msg.reactions[role] === p.emoji) delete msg.reactions[role];
+    else msg.reactions[role] = p.emoji;
+    io.to(code).emit('update', { id: msg.id, reactions: msg.reactions });
+  });
+
+  // Edit: only your own text messages.
+  socket.on('edit', (p) => {
+    const r = rooms.get(code);
+    const msg = findMsg(p?.id);
+    if (!r || !msg || msg.from !== role || msg.type !== 'text') return;
+    const text = String(p.text || '').slice(0, 4000);
+    if (!text.trim()) return;
+    msg.text = text;
+    msg.edited = true;
+    io.to(code).emit('update', { id: msg.id, text, edited: true });
+    refreshQuotes(r, msg.id, snippet(msg));
+  });
+
+  // Delete for everyone: only your own messages.
+  socket.on('delete', (p) => {
+    const r = rooms.get(code);
+    const msg = findMsg(p?.id);
+    if (!r || !msg || msg.from !== role) return;
+    r.messages = r.messages.filter((x) => x.id !== msg.id);
+    io.to(code).emit('deleted', { id: msg.id });
+    refreshQuotes(r, msg.id, 'Message deleted');
   });
 
   // "Clear chat": wipes it for both people.
