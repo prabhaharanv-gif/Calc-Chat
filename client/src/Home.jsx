@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import Chat from './Chat.jsx';
+import Icon from './Icon.jsx';
 import { post } from './api.js';
 import { randomCode, randomSecret } from './storage.js';
 
@@ -10,6 +11,19 @@ const JOIN_ERRORS = {
   rate: 'Too many tries. Wait a minute.',
   bad_code: 'Code looks wrong (8 letters/numbers).',
 };
+
+// 8-character code shown as two groups of four tiles.
+function Tiles({ code, small }) {
+  return (
+    <div className={`tiles ${small ? 'small' : ''}`}>
+      {[0, 4].map((s) => (
+        <div className="tilegroup" key={s}>
+          {code.slice(s, s + 4).split('').map((c, i) => <span key={i} className="tile">{c}</span>)}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function Home({ profile, update, onLock, theme, onTheme }) {
   const [view, setView] = useState(null); // null | 'owner' | 'guest'
@@ -67,57 +81,74 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
   };
 
   if (view === 'owner') {
-    return <Chat role="owner" code={profile.ownCode} secret={profile.ownSecret} title="My chat"
+    return <Chat role="owner" code={profile.ownCode} secret={profile.ownSecret} title="You"
       onBack={() => setView(null)} onLock={onLock} theme={theme} onTheme={onTheme} />;
   }
   if (view === 'guest' && profile.joined) {
     return <Chat role="guest" code={profile.joined.code} secret={profile.joined.secret}
-      title={`Chat ${profile.joined.code}`} onBack={() => setView(null)} onLock={onLock}
-      theme={theme} onTheme={onTheme} />;
+      title="Friend" onBack={() => setView(null)} onLock={onLock} theme={theme} onTheme={onTheme} />;
   }
 
   return (
-    <div className="page">
-      <header className="bar">
-        <span>Private Chat</span>
+    <div className="page homepage">
+      <header className="homebar">
+        <div className="brand">
+          <span className="logo"><Icon name="shield" size={17} /></span>
+          <span>Private Chat</span>
+        </div>
         <div className="row">
-          <button className="ghost" onClick={onTheme} title="Light / dark">{theme === 'dark' ? '☀️' : '🌙'}</button>
-          <button className="ghost" onClick={onLock}>🔒 Lock</button>
+          <button className="iconbtn" onClick={onTheme} aria-label="Switch theme">
+            <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+          </button>
+          <button className="iconbtn" onClick={onLock} aria-label="Lock"><Icon name="lock" /></button>
         </div>
       </header>
+
       <div className="home">
-        <section className="card">
-          <div className="muted">Your code</div>
-          <div className="code">{profile.ownCode}</div>
-          <div className="row">
-            <button className="ghost" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
-            {navigator.share && <button className="ghost" onClick={share}>Share</button>}
-            <button className="ghost" onClick={newCode}>New code</button>
+        <section className="hero">
+          <div className="eyebrow">Your private code</div>
+          <Tiles code={profile.ownCode} />
+          <div className="pills">
+            <button className="pill" onClick={copy}>
+              <Icon name={copied ? 'check' : 'copy'} size={15} />{copied ? 'Copied' : 'Copy'}
+            </button>
+            {navigator.share && (
+              <button className="pill" onClick={share}><Icon name="share" size={15} />Share</button>
+            )}
+            <button className="pill" onClick={newCode}><Icon name="refresh" size={15} />New code</button>
           </div>
-          <button className="primary" onClick={() => setView('owner')}>Open my chat</button>
-          <p className="muted small">Anyone with this code can join your chat (max 2 people).</p>
+          <button className="cta" onClick={() => setView('owner')}>
+            <Icon name="message" size={18} />Open my chat
+          </button>
+          <p className="hint">Give this code to one person. They can join your chat.</p>
         </section>
 
-        <section className="card">
-          <div className="muted">Join a friend</div>
+        <section className="panel">
+          <div className="paneltitle"><Icon name="user" size={18} /><h3>Join a friend</h3></div>
           {profile.joined ? (
             <>
-              <div className="code small">{profile.joined.code}</div>
-              <button className="primary" onClick={() => setView('guest')}>Open chat</button>
-              <button className="ghost" onClick={leave}>Leave chat</button>
+              <Tiles code={profile.joined.code} small />
+              <div className="row">
+                <button className="primary grow" onClick={() => setView('guest')}>Open chat</button>
+                <button className="danger" onClick={leave}>Leave</button>
+              </div>
             </>
           ) : (
-            <form onSubmit={join} className="col">
-              <input placeholder="Enter friend's code" value={joinInput} maxLength={12}
-                onChange={(e) => setJoinInput(e.target.value)} autoCapitalize="characters" />
-              <button className="primary" disabled={busy}>Join</button>
+            <form onSubmit={join} className="joinrow">
+              <input placeholder="ENTER CODE" value={joinInput} maxLength={12} autoCapitalize="characters"
+                autoComplete="off" spellCheck="false" onChange={(e) => setJoinInput(e.target.value)} />
+              <button className="primary" disabled={busy}>{busy ? '...' : 'Join'}</button>
             </form>
           )}
         </section>
-        {msg && <div className="err">{msg}</div>}
-        <p className="muted small center-text">
-          Messages and media are never saved. They disappear after 4 hours.
-        </p>
+
+        {msg && <div className="err center-text">{msg}</div>}
+
+        <ul className="perks">
+          <li><Icon name="eyeoff" size={20} /><span>No account</span></li>
+          <li><Icon name="clock" size={20} /><span>Gone in 4 hours</span></li>
+          <li><Icon name="shield" size={20} /><span>Nothing saved</span></li>
+        </ul>
       </div>
     </div>
   );

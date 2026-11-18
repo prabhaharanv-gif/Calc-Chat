@@ -1,11 +1,13 @@
 :root, :root[data-theme='dark'] {
   --bg: #000; --page: #111; --surface: #1c1c1e; --surface2: #2c2c2e;
   --text: #fff; --muted: #8e8e93; --key: #333; --fn: #a5a5a5; --fn-text: #000;
+  --border: rgba(255,255,255,.08);
   color-scheme: dark;
 }
 :root[data-theme='light'] {
   --bg: #fff; --page: #f2f2f7; --surface: #fff; --surface2: #e5e5ea;
   --text: #000; --muted: #6c6c70; --key: #e5e5ea; --fn: #c7c7cc; --fn-text: #000;
+  --border: rgba(0,0,0,.07);
   color-scheme: light;
 }
 
@@ -34,7 +36,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); font-weight: 600; justify-content: space-between; }
 .grow { flex: 1; min-width: 0; }
 .muted { color: var(--muted); }
-.codetitle { font-family: ui-monospace, Consolas, monospace; letter-spacing: .15em; font-size: 1.05rem; -webkit-user-select: text; user-select: text; }
+.codebar { background: var(--surface); text-align: center; font-size: .8rem; color: var(--muted); padding: 0 10px 8px; cursor: pointer; }
+.codebar b { color: var(--text); font-family: ui-monospace, Consolas, monospace; letter-spacing: .15em; }
 .bar .ghost { padding: 8px 10px; flex: none; }
 .bar .grow > div:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .small { font-size: .78rem; }
@@ -51,7 +54,52 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .ghost { background: var(--surface2); padding: 8px 12px; border-radius: 10px; }
 
 /* Home */
-.home { padding: 16px; display: flex; flex-direction: column; gap: 16px; align-items: center; overflow-y: auto; }
+.homepage { background: radial-gradient(900px 380px at 50% -120px, rgba(10,132,255,.20), transparent 70%), var(--page); }
+.homebar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 6px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05rem; letter-spacing: .2px; }
+.logo { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, #0a84ff, #5e5ce6); box-shadow: 0 6px 16px rgba(10,132,255,.35); }
+.iconbtn { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex: none;
+  background: var(--surface); border: 1px solid var(--border); }
+.iconbtn:active { transform: scale(.95); }
+.home { width: 100%; max-width: 480px; margin: 0 auto; padding: 12px 16px 28px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; animation: rise .35s ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+
+.hero { position: relative; overflow: hidden; color: #fff; border-radius: 26px; padding: 22px 20px 18px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 100%); box-shadow: 0 16px 36px rgba(10,132,255,.30); }
+.hero::after { content: ''; position: absolute; width: 220px; height: 220px; right: -70px; top: -90px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.28), transparent 70%); pointer-events: none; }
+.eyebrow { font-size: .72rem; letter-spacing: .18em; text-transform: uppercase; opacity: .85; font-weight: 600; }
+.tiles { display: flex; gap: 14px; justify-content: center; }
+.tilegroup { display: flex; gap: 6px; }
+.tile { width: 34px; height: 46px; border-radius: 11px; display: grid; place-items: center; font-size: 1.4rem; font-weight: 700;
+  font-family: ui-monospace, Consolas, monospace; background: rgba(255,255,255,.17); border: 1px solid rgba(255,255,255,.30);
+  -webkit-user-select: text; user-select: text; }
+.tiles.small .tile { width: 30px; height: 40px; font-size: 1.15rem; background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+.pills { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; font-size: .85rem; font-weight: 600;
+  background: rgba(255,255,255,.18); color: #fff; border: 1px solid rgba(255,255,255,.22); }
+.pill:active { background: rgba(255,255,255,.3); }
+.cta { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-radius: 15px;
+  background: #fff; color: #3a3ad0; font-weight: 700; font-size: 1rem; box-shadow: 0 6px 18px rgba(0,0,0,.16); }
+.cta:active { transform: scale(.98); }
+.hint { margin: 0; font-size: .78rem; opacity: .8; text-align: center; }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.paneltitle { display: flex; align-items: center; gap: 10px; color: #0a84ff; }
+.paneltitle h3 { margin: 0; font-size: 1rem; color: var(--text); }
+.joinrow { display: flex; gap: 8px; }
+.joinrow input { flex: 1; min-width: 0; padding: 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); font: 600 1rem ui-monospace, Consolas, monospace; letter-spacing: .22em; text-align: center; text-transform: uppercase; outline: none; }
+.joinrow input:focus { border-color: #0a84ff; box-shadow: 0 0 0 3px rgba(10,132,255,.2); }
+.joinrow input::placeholder { letter-spacing: .14em; font-weight: 500; opacity: .5; }
+.joinrow .primary { border-radius: 14px; padding: 0 22px; }
+.danger { padding: 12px 16px; border-radius: 12px; background: rgba(255,69,58,.12); color: #ff453a; font-weight: 600; }
+.perks { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.perks li { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; border-radius: 16px;
+  background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-size: .72rem; text-align: center; }
+.perks li svg { color: #0a84ff; }
 .code { font-size: 2.2rem; letter-spacing: .25em; font-weight: 700; text-align: center; font-family: ui-monospace, Consolas, monospace; -webkit-user-select: text; user-select: text; }
 .code.small { font-size: 1.5rem; }
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { SERVER } from './config.js';
 import { post } from './api.js';
+import Icon from './Icon.jsx';
 
 const MAX_FILE = 25 * 1024 * 1024;
 
@@ -125,15 +126,6 @@ export default function Chat({ role, code, secret, title, onBack, onLock, theme,
     } catch { alert('Microphone permission denied.'); }
   };
 
-  const [copied, setCopied] = useState(false);
-  const copyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch { /* clipboard blocked */ }
-  };
-
   const clearChat = () => {
     if (confirm('Clear this chat for both people?')) sock.current?.emit('clear');
   };
@@ -144,14 +136,14 @@ export default function Chat({ role, code, secret, title, onBack, onLock, theme,
   return (
     <div className="page chat">
       <header className="bar">
-        <button className="ghost" onClick={onBack}>←</button>
-        <div className="grow" onClick={copyCode} title="Tap to copy code" style={{ cursor: 'pointer' }}>
-          <div className="codetitle">{code}</div>
-          <div className="muted small">{copied ? 'Code copied ✓' : sub}</div>
+        <button className="iconbtn" onClick={onBack} aria-label="Back"><Icon name="back" /></button>
+        <div className="grow">
+          <div>{role === 'owner' ? 'You' : 'Friend'}</div>
+          <div className="muted small">{sub}</div>
         </div>
-        <button className="ghost" onClick={onTheme} title="Light / dark">{theme === 'dark' ? '☀️' : '🌙'}</button>
-        <button className="ghost" onClick={clearChat} title="Clear chat for both">🗑</button>
-        <button className="ghost" onClick={onLock}>🔒</button>
+        <button className="iconbtn" onClick={onTheme} aria-label="Switch theme"><Icon name={theme === 'dark' ? 'sun' : 'moon'} /></button>
+        <button className="iconbtn" onClick={clearChat} aria-label="Clear chat for both"><Icon name="trash" /></button>
+        <button className="iconbtn" onClick={onLock} aria-label="Lock"><Icon name="lock" /></button>
       </header>
 
       <div className="msgs">
@@ -178,7 +170,7 @@ export default function Chat({ role, code, secret, title, onBack, onLock, theme,
 
       <form className="composer" onSubmit={sendText}>
         <label className="icon" title="Photo / video / file">
-          📎
+          <Icon name="clip" size={20} />
           <input type="file" accept="image/*,video/*,audio/*,*/*" onChange={onPick} hidden />
         </label>
         <input value={text} onChange={(e) => setText(e.target.value)}
@@ -186,7 +178,7 @@ export default function Chat({ role, code, secret, title, onBack, onLock, theme,
         {text.trim() ? (
           <button className="send">Send</button>
         ) : (
-          <button type="button" className={`icon mic ${recording ? 'rec' : ''}`} onClick={toggleRecord}>🎤</button>
+          <button type="button" className={`icon mic ${recording ? 'rec' : ''}`} onClick={toggleRecord}><Icon name="mic" size={20} /></button>
         )}
       </form>
     </div>
