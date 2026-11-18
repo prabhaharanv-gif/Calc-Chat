@@ -2,14 +2,20 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { newGame, play } from './game2048.js';
 import PinPad from './PinPad.jsx';
 import GameHeader, { Scores } from './GameHeader.jsx';
+import GameOver from './GameOver.jsx';
+import { loadProgress, saveProgress } from './progress.js';
 
 const KEYS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', a: 'left', d: 'right', w: 'up', s: 'down' };
 const readBest = () => { try { return Number(localStorage.getItem('g2048_best')) || 0; } catch { return 0; } };
+const valid = (v) => v.game && typeof v.game.score === 'number' && Array.isArray(v.game.grid)
+  && v.game.grid.length === 4 && v.game.grid.every((r) => Array.isArray(r) && r.length === 4);
 
 export default function Game2048({ onCode, passLen, signal, onBack }) {
-  const [game, setGame] = useState(newGame);
+  const [saved] = useState(() => loadProgress('2048', valid));
+  const [game, setGame] = useState(() => saved?.game || newGame());
+  const [keepGoing, setKeepGoing] = useState(() => saved?.keepGoing || false);
   const [best, setBest] = useState(readBest);
-  const [keepGoing, setKeepGoing] = useState(false);
+  const startBest = useRef(best); // best score when this round began (to show "New best!")
   const [pinOpen, setPinOpen] = useState(false);
   const swipe = useRef(null);
 
@@ -20,8 +26,11 @@ export default function Game2048({ onCode, passLen, signal, onBack }) {
     }
   }, [game.score, best]);
 
+  // Keep the board saved; a finished game is not resumed.
+  useEffect(() => { saveProgress('2048', game.over ? null : { game, keepGoing }); }, [game, keepGoing]);
+
   const move = useCallback((dir) => setGame((g) => play(g, dir)), []);
-  const restart = () => { setGame(newGame()); setKeepGoing(false); };
+  const restart = () => { startBest.current = best; setGame(newGame()); setKeepGoing(false); };
 
   useEffect(() => {
     if (pinOpen) return undefined;
@@ -45,6 +54,8 @@ export default function Game2048({ onCode, passLen, signal, onBack }) {
   };
 
   const showWin = game.won && !keepGoing && !game.over;
+  const stats = [['Score', game.score], ['Best', best]];
+  const newBest = game.score > 0 && game.score > startBest.current;
 
   return (
     <div className="gamewrap themed">
@@ -63,14 +74,13 @@ export default function Game2048({ onCode, passLen, signal, onBack }) {
             </div>
           ))}
           {pinOpen && <PinPad passLen={passLen} onCode={onCode} onClose={() => setPinOpen(false)} />}
-          {(game.over || showWin) && (
-            <div className="gover">
-              <h2>{game.over ? 'Game over!' : 'You win!'}</h2>
-              <div className="row">
-                {showWin && <button className="gbtn" onClick={() => setKeepGoing(true)}>Keep going</button>}
-                <button className="gbtn" onClick={restart}>{game.over ? 'Try again' : 'New game'}</button>
-              </div>
-            </div>
+          {game.over && (
+            <GameOver emoji="🧩" title="Game Over" newBest={newBest} stats={stats} onAgain={restart} onHome={onBack} />
+          )}
+          {showWin && (
+            <GameOver emoji="🏆" win title="You Win!" subtitle="You reached the 2048 tile" newBest={newBest} stats={stats}
+              onAgain={restart} onHome={onBack}
+              extra={<button className="govkeep" onClick={() => setKeepGoing(true)}>Keep Going</button>} />
           )}
         </div></div>
 

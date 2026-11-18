@@ -1,13 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { newMemory, flip, resolve } from './memory.js';
 import PinPad from './PinPad.jsx';
 import GameHeader, { Scores } from './GameHeader.jsx';
+import GameOver from './GameOver.jsx';
+import { loadProgress, saveProgress } from './progress.js';
 
 const readBest = () => { try { return Number(localStorage.getItem('mem_best')) || 0; } catch { return 0; } };
+const valid = (v) => Array.isArray(v.cards) && v.cards.length === 16 && typeof v.moves === 'number';
 
 export default function Memory({ onCode, passLen, signal, onBack }) {
-  const [g, setG] = useState(() => newMemory());
-  const [best, setBest] = useState(readBest);
+  // A saved game resumes; a half-flipped wrong pair is turned back over.
+  const [g, setG] = useState(() => { const s = loadProgress('memory', valid); return s ? resolve(s) : newMemory(); });
+  const [best, setBest] = useState(readBest); // fewest moves
+  const startBest = useRef(best);
   const [pinOpen, setPinOpen] = useState(false);
 
   // A wrong pair stays visible for a moment, then flips back.
@@ -25,7 +30,10 @@ export default function Memory({ onCode, passLen, signal, onBack }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [g.won]);
 
-  const restart = () => setG(newMemory());
+  useEffect(() => { saveProgress('memory', g.won ? null : g); }, [g]);
+
+  const restart = () => { startBest.current = best; setG(newMemory()); };
+  const newBest = g.won && (!startBest.current || g.moves < startBest.current);
 
   return (
     <div className="gamewrap themed">
@@ -47,11 +55,8 @@ export default function Memory({ onCode, passLen, signal, onBack }) {
           ))}
           {pinOpen && <PinPad passLen={passLen} onCode={onCode} onClose={() => setPinOpen(false)} />}
           {g.won && (
-            <div className="gover">
-              <h2>You did it!</h2>
-              <p>{g.moves} moves</p>
-              <button className="gbtn" onClick={restart}>Play again</button>
-            </div>
+            <GameOver emoji="🏆" win title="You Did It!" subtitle="All pairs matched" newBest={newBest}
+              stats={[['Moves', g.moves], ['Best', best || g.moves]]} onAgain={restart} onHome={onBack} />
           )}
         </div></div>
         <p className="ghow"><b>How to play:</b> tap two cards to flip them. If they match they stay open. Match all 8 pairs in as few moves as you can.</p>

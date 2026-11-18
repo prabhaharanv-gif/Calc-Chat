@@ -1,12 +1,20 @@
-import { useEffect, useState } from 'react';
-import { COLS, MINES, newGame, reveal, toggleFlag, flagsUsed } from './minesweeper.js';
+import { useEffect, useRef, useState } from 'react';
+import { COLS, ROWS, MINES, newGame, reveal, toggleFlag, flagsUsed } from './minesweeper.js';
 import PinPad from './PinPad.jsx';
 import GameHeader, { Scores } from './GameHeader.jsx';
+import GameOver from './GameOver.jsx';
+import { loadProgress, saveProgress } from './progress.js';
+
+const readBest = () => { try { return Number(localStorage.getItem('mines_best')) || 0; } catch { return 0; } };
+const valid = (v) => v.g && Array.isArray(v.g.cells) && v.g.cells.length === ROWS * COLS && typeof v.time === 'number';
 
 export default function Mines({ onCode, passLen, signal, onBack }) {
-  const [g, setG] = useState(newGame);
+  const [saved] = useState(() => loadProgress('mines', valid));
+  const [g, setG] = useState(() => saved?.g || newGame());
+  const [time, setTime] = useState(() => saved?.time || 0);
   const [flagMode, setFlagMode] = useState(false);
-  const [time, setTime] = useState(0);
+  const [best, setBest] = useState(readBest); // fastest clear, in seconds
+  const startBest = useRef(best);
   const [pinOpen, setPinOpen] = useState(false);
 
   useEffect(() => {
@@ -15,7 +23,17 @@ export default function Mines({ onCode, passLen, signal, onBack }) {
     return () => clearInterval(id);
   }, [g.started, g.over, pinOpen]);
 
-  const restart = () => { setG(newGame()); setTime(0); };
+  useEffect(() => {
+    if (g.won && (!best || time < best)) {
+      setBest(time);
+      try { localStorage.setItem('mines_best', String(time)); } catch { /* storage blocked */ }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [g.won]);
+
+  useEffect(() => { saveProgress('mines', g.over ? null : { g, time }); }, [g, time]);
+
+  const restart = () => { startBest.current = best; setG(newGame()); setTime(0); };
   const tap = (i) => { if (!pinOpen) setG((s) => (flagMode ? toggleFlag(s, i) : reveal(s, i))); };
   const rightClick = (e, i) => { e.preventDefault(); if (!pinOpen) setG((s) => toggleFlag(s, i)); };
 
@@ -42,11 +60,14 @@ export default function Mines({ onCode, passLen, signal, onBack }) {
           ))}
           {pinOpen && <PinPad passLen={passLen} onCode={onCode} onClose={() => setPinOpen(false)} />}
           {g.over && (
-            <div className="gover">
-              <h2>{g.won ? 'You cleared it!' : 'Boom!'}</h2>
-              <p>{g.won ? `Time ${time}s` : 'You hit a mine'}</p>
-              <button className="gbtn" onClick={restart}>Play again</button>
-            </div>
+            g.won ? (
+              <GameOver emoji="🏆" win title="You Cleared It!" subtitle="Every safe square is open"
+                newBest={!startBest.current || time < startBest.current}
+                stats={[['Time', `${time}s`], ['Best', `${best || time}s`]]} onAgain={restart} onHome={onBack} />
+            ) : (
+              <GameOver emoji="💣" title="Boom!" subtitle="You hit a mine" stats={[['Time', `${time}s`], ['Best', best ? `${best}s` : '-']]}
+                onAgain={restart} onHome={onBack} />
+            )
           )}
         </div></div>
         <p className="ghow"><b>How to play:</b> tap a square to dig. Numbers tell how many mines touch it. Switch to Flag (or right-click) to mark mines. Open every safe square to win.</p>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { COLS, ROWS, newState, step } from './snake.js';
 import PinPad from './PinPad.jsx';
 import GameHeader, { Scores } from './GameHeader.jsx';
+import GameOver from './GameOver.jsx';
 
 const CELL = 28; // canvas pixels per cell
 const KEYS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', a: 'left', d: 'right', w: 'up', s: 'down' };
@@ -80,6 +81,7 @@ export default function Snake({ onCode, passLen, signal, onBack }) {
   const [g, setG] = useState(() => newState());
   const [running, setRunning] = useState(false);
   const [best, setBest] = useState(readBest);
+  const startBest = useRef(best); // best score when this round began (to show "New best!")
   const [pinOpen, setPinOpen] = useState(false);
   const canvas = useRef(null);
   const inputs = useRef([]); // queued turns, so two quick swipes are not lost
@@ -93,7 +95,7 @@ export default function Snake({ onCode, passLen, signal, onBack }) {
     setRunning(true);
   }, [g.over]);
 
-  const restart = () => { inputs.current = []; setG(newState()); setRunning(false); };
+  const restart = () => { inputs.current = []; startBest.current = best; setG(newState()); setRunning(false); };
 
   useEffect(() => {
     if (!running || pinOpen || g.over) return undefined;
@@ -146,11 +148,9 @@ export default function Snake({ onCode, passLen, signal, onBack }) {
           {pinOpen && <PinPad passLen={passLen} onCode={onCode} onClose={() => setPinOpen(false)} />}
           {!running && !g.over && <div className="sover start"><b>Tap or press an arrow key to start</b></div>}
           {g.over && (
-            <div className="sover">
-              <h2>{g.won ? 'You win!' : 'Game over!'}</h2>
-              <p>Score {g.score}</p>
-              <button className="gbtn" onClick={restart}>Play again</button>
-            </div>
+            <GameOver emoji={g.won ? '🏆' : '🐍'} title={g.won ? 'You Win!' : 'Game Over'} win={g.won}
+              newBest={g.score > 0 && g.score > startBest.current} stats={[['Score', g.score], ['Best', best]]}
+              onAgain={restart} onHome={onBack} />
           )}
         </div></div>
 

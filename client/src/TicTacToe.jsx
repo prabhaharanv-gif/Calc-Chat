@@ -2,16 +2,21 @@ import { useEffect, useState } from 'react';
 import { winner, computerMove } from './tictactoe.js';
 import PinPad from './PinPad.jsx';
 import GameHeader, { Scores } from './GameHeader.jsx';
+import GameOver from './GameOver.jsx';
+import { loadProgress, saveProgress } from './progress.js';
 
 const readScore = () => {
   try { return JSON.parse(localStorage.getItem('ttt_score')) || { w: 0, l: 0, d: 0 }; } catch { return { w: 0, l: 0, d: 0 }; }
 };
+const valid = (v) => Array.isArray(v.board) && v.board.length === 9 && (v.turn === 'X' || v.turn === 'O');
 
 export default function TicTacToe({ onCode, passLen, signal, onBack }) {
-  const [board, setBoard] = useState(Array(9).fill(null));
-  const [turn, setTurn] = useState('X'); // you are X, the computer is O
+  const [saved] = useState(() => loadProgress('ttt', valid));
+  const [board, setBoard] = useState(() => saved?.board || Array(9).fill(null));
+  const [turn, setTurn] = useState(() => saved?.turn || 'X'); // you are X, the computer is O
   const [score, setScore] = useState(readScore);
   const [pinOpen, setPinOpen] = useState(false);
+  const [overShown, setOverShown] = useState(false);
   const result = winner(board);
 
   // Count the finished game once.
@@ -23,6 +28,15 @@ export default function TicTacToe({ onCode, passLen, signal, onBack }) {
       return next;
     });
   }, [result]);
+
+  // Show the end screen a moment after the last move so the final board is visible.
+  useEffect(() => {
+    if (!result) { setOverShown(false); return undefined; }
+    const t = setTimeout(() => setOverShown(true), 700);
+    return () => clearTimeout(t);
+  }, [result]);
+
+  useEffect(() => { saveProgress('ttt', result ? null : { board, turn }); }, [board, turn, result]);
 
   // The computer replies after a short pause.
   useEffect(() => {
@@ -45,12 +59,17 @@ export default function TicTacToe({ onCode, passLen, signal, onBack }) {
 
   const status = result === 'X' ? 'You win! 🎉' : result === 'O' ? 'Computer wins' : result === 'draw' ? "It's a draw"
     : turn === 'X' ? 'Your turn (X)' : 'Computer is thinking...';
+  const end = {
+    X: { emoji: '🏆', title: 'You Win!', sub: 'Nice moves' },
+    O: { emoji: '🤖', title: 'Computer Wins', sub: 'Try again' },
+    draw: { emoji: '🤝', title: "It's a Draw", sub: 'Well matched' },
+  }[result];
 
   return (
     <div className="gamewrap themed">
       <div className="game">
         <GameHeader title="Tic Tac Toe" signal={signal} onBack={onBack} onPin={() => setPinOpen(true)}
-          right={<Scores items={[['WIN', score.w], ['LOSE', score.l], ['DRAW', score.d]]} />} />
+          right={<Scores items={[['W / L / D', `${score.w} / ${score.l} / ${score.d}`]]} />} />
         <div className="gbar">
           <p className="tstatus">{status}</p>
           <button className="gbtn" onClick={restart}>New Game</button>
@@ -61,6 +80,10 @@ export default function TicTacToe({ onCode, passLen, signal, onBack }) {
             <button key={i} className={`tcell ${v ? `m${v}` : ''}`} onClick={() => play(i)} aria-label={v || 'Empty'}>{v}</button>
           ))}
           {pinOpen && <PinPad passLen={passLen} onCode={onCode} onClose={() => setPinOpen(false)} />}
+          {end && overShown && (
+            <GameOver emoji={end.emoji} win={result === 'X'} title={end.title} subtitle={end.sub}
+              stats={[['Won', score.w], ['Lost', score.l], ['Draw', score.d]]} onAgain={restart} onHome={onBack} />
+          )}
         </div></div>
         <p className="ghow"><b>How to play:</b> get three in a row (across, down or diagonal) before the computer does.</p>
       </div>

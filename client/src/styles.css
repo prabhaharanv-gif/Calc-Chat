@@ -530,6 +530,48 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .hm-stack { gap: 12px; }
 @media (max-height: 620px) { .hm-privacy { display: none; } }
 .gboard { border: 3px solid var(--accent); }
+
+/* ===== Same Game Over / You Win screen in every game ===== */
+.govr { position: absolute; inset: 0; z-index: 12; border-radius: inherit; display: grid; place-items: center; overflow: hidden; padding: 12px;
+  background: radial-gradient(circle at 50% 28%, rgba(155,28,60,.38), rgba(14,8,18,.8)); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); animation: fade .25s ease; }
+.govcard { position: relative; width: min(100%, 290px); padding: 18px 16px 14px; border-radius: 24px; text-align: center; color: var(--text); display: flex; flex-direction: column; align-items: center; gap: 5px;
+  background: var(--surface); border: 1px solid var(--glass-b); box-shadow: 0 30px 60px -24px rgba(0,0,0,.6); animation: govpop .42s cubic-bezier(.2,1.25,.35,1) both; }
+@keyframes govpop { from { transform: translateY(16px) scale(.86); opacity: 0; } }
+.govemoji { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; font-size: 1.8rem; margin-top: -42px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 14px 28px -10px var(--glow), 0 0 0 5px var(--surface); }
+.govcard h2 { margin: 6px 0 0; font: 700 1.65rem/1.1 'Baloo 2 Variable', 'Inter Variable', sans-serif; color: var(--accent); }
+.govsub { margin: 0; color: var(--muted); font-size: .84rem; }
+.govbadge { margin-top: 2px; padding: 3px 12px; border-radius: 999px; font-size: .78rem; font-weight: 700; color: #7a4a00;
+  background: linear-gradient(135deg, #ffe08a, #ffb830); animation: govbadge .6s .25s both; }
+@keyframes govbadge { from { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.15); } }
+.govstats { display: flex; gap: 8px; width: 100%; margin: 6px 0 0; }
+.govstats > div { flex: 1; min-width: 0; padding: 7px 4px; border-radius: 14px; background: var(--surface2); }
+.govstats span { display: block; font-size: .6rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.govstats b { font: 700 1.25rem/1.2 'Baloo 2 Variable', 'Inter Variable', sans-serif; }
+.govbtns { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; margin-top: 8px; }
+.govplay { flex: 2 1 55%; padding: 11px; border-radius: 14px; color: #fff; font-weight: 700; font-size: .98rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 14px 26px -14px var(--glow); }
+.govplay:active { transform: scale(.98); }
+.govkeep, .govhome { flex: 1 1 32%; padding: 10px 6px; border-radius: 14px; font-weight: 600; font-size: .9rem; background: var(--surface2); border: 1px solid var(--glass-b); }
+.govbtns:has(.govkeep) .govplay { flex-basis: 100%; }
+.confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.confetti i { position: absolute; top: -14px; left: calc(var(--i) * 5%); width: 8px; height: 13px; border-radius: 2px; opacity: .95;
+  background: hsl(calc(340 + var(--i) * 4), 85%, 60%); animation: confall 1.9s cubic-bezier(.3,.6,.5,1) both; animation-delay: calc(var(--i) * 45ms); }
+@keyframes confall { to { transform: translateY(520px) rotate(620deg); opacity: 0; } }
+@media (max-height: 660px) {
+  .govsub { display: none; }
+  .govemoji { width: 46px; height: 46px; font-size: 1.4rem; margin-top: -32px; }
+  .govcard { padding: 12px 12px 10px; gap: 3px; }
+  .govcard h2 { font-size: 1.35rem; }
+  .govstats { margin-top: 3px; }
+  .govstats > div { padding: 4px 2px; }
+  .govstats b { font-size: 1.05rem; }
+  .govbtns { margin-top: 5px; }
+  .govplay, .govkeep, .govhome { padding: 8px 6px; }
+}
+
+/* Hold-the-title gesture: same generous touch area on every game title and on the hub title */
+.gtitle { padding: 6px 10px; margin: -6px -10px; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
 .icon.off, .icon:disabled { opacity: .45; cursor: not-allowed; }
 .composer input:disabled { opacity: .6; }
 .infopop { left: 12px; top: 66px; width: min(300px, calc(100vw - 24px)); padding: 14px; gap: 6px; }
