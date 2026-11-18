@@ -3,43 +3,77 @@ import { COLS, ROWS, newState, step } from './snake.js';
 import PinPad from './PinPad.jsx';
 import GameHeader, { Scores } from './GameHeader.jsx';
 
-const CELL = 22; // canvas pixels per cell
+const CELL = 28; // canvas pixels per cell
 const KEYS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', a: 'left', d: 'right', w: 'up', s: 'down' };
 const readBest = () => { try { return Number(localStorage.getItem('snake_best')) || 0; } catch { return 0; } };
+
+function path(ctx, pts, dx = 0, dy = 0) {
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x + dx, y + dy) : ctx.moveTo(x + dx, y + dy)));
+  ctx.stroke();
+}
 
 function draw(canvas, g) {
   const ctx = canvas.getContext('2d');
   const size = COLS * CELL;
-  ctx.fillStyle = '#16231b';
-  ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = '#1a2a20';
-  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) if ((x + y) % 2) ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
 
+  // bright lawn
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      ctx.fillStyle = (x + y) % 2 ? '#aadb59' : '#b6e467';
+      ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+    }
+  }
+  const sheen = ctx.createLinearGradient(0, 0, size, size);
+  sheen.addColorStop(0, 'rgba(255,255,255,.18)');
+  sheen.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sheen;
+  ctx.fillRect(0, 0, size, size);
+
+  // apple
   if (g.food) {
-    ctx.fillStyle = '#ff5d5d';
-    ctx.beginPath();
-    ctx.arc((g.food.x + 0.5) * CELL, (g.food.y + 0.5) * CELL, CELL * 0.36, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#7bd88f';
-    ctx.fillRect((g.food.x + 0.5) * CELL - 1, g.food.y * CELL + 1, 2, 5);
+    const cx = (g.food.x + 0.5) * CELL;
+    const cy = (g.food.y + 0.56) * CELL;
+    ctx.fillStyle = 'rgba(0,0,0,.16)';
+    ctx.beginPath(); ctx.ellipse(cx + 1.5, cy + CELL * 0.34, CELL * 0.3, CELL * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+    const grad = ctx.createRadialGradient(cx - 4, cy - 5, 2, cx, cy, CELL * 0.4);
+    grad.addColorStop(0, '#ff8a8a');
+    grad.addColorStop(1, '#e5252a');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(cx, cy, CELL * 0.36, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.7)';
+    ctx.beginPath(); ctx.ellipse(cx - 5, cy - 5, 3.2, 2, -0.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3f9b3a';
+    ctx.beginPath(); ctx.ellipse(cx + 3, cy - CELL * 0.4, 5, 2.6, -0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#6b4a2b'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(cx, cy - CELL * 0.3); ctx.lineTo(cx - 1, cy - CELL * 0.45); ctx.stroke();
   }
-  g.snake.forEach((p, i) => {
-    ctx.fillStyle = i === 0 ? '#4ec36b' : i % 2 ? '#7bd88f' : '#6fcf84';
-    const pad = i === 0 ? 1 : 2;
-    ctx.beginPath();
-    ctx.roundRect(p.x * CELL + pad, p.y * CELL + pad, CELL - pad * 2, CELL - pad * 2, 6);
-    ctx.fill();
+
+  // snake: one smooth thick line through the segment centres
+  const pts = g.snake.map((p) => [(p.x + 0.5) * CELL, (p.y + 0.5) * CELL]);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.lineWidth = CELL * 0.82; path(ctx, pts, 1.5, 2.5);
+  ctx.strokeStyle = '#2f6df0'; ctx.lineWidth = CELL * 0.8; path(ctx, pts);
+  ctx.strokeStyle = '#4f8bff'; ctx.lineWidth = CELL * 0.58; path(ctx, pts);
+  ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = CELL * 0.14; path(ctx, pts, -2, -3);
+
+  // head + eyes
+  const [hx, hy] = pts[0];
+  ctx.fillStyle = '#2f6df0';
+  ctx.beginPath(); ctx.arc(hx, hy, CELL * 0.46, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#4f8bff';
+  ctx.beginPath(); ctx.arc(hx - 1, hy - 1.5, CELL * 0.34, 0, Math.PI * 2); ctx.fill();
+  const look = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] }[g.dir];
+  const side = [-look[1], look[0]];
+  [-1, 1].forEach((k) => {
+    const ex = hx + look[0] * 5 + side[0] * k * 6;
+    const ey = hy + look[1] * 5 + side[1] * k * 6;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(ex, ey, 4.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#17233f';
+    ctx.beginPath(); ctx.arc(ex + look[0] * 1.6, ey + look[1] * 1.6, 2.1, 0, Math.PI * 2); ctx.fill();
   });
-  const h = g.snake[0];
-  ctx.fillStyle = '#0d1a12';
-  const eye = (ox, oy) => { ctx.beginPath(); ctx.arc(h.x * CELL + ox, h.y * CELL + oy, 2, 0, Math.PI * 2); ctx.fill(); };
-  if (g.dir === 'left' || g.dir === 'right') {
-    const ox = g.dir === 'right' ? 16 : 6;
-    eye(ox, 7); eye(ox, 15);
-  } else {
-    const oy = g.dir === 'down' ? 16 : 6;
-    eye(7, oy); eye(15, oy);
-  }
 }
 
 export default function Snake({ onCode, passLen, signal, onBack }) {
@@ -98,10 +132,14 @@ export default function Snake({ onCode, passLen, signal, onBack }) {
   };
 
   return (
-    <div className="gamewrap snakewrap">
+    <div className="gamewrap themed">
       <div className="game">
         <GameHeader title="Snake" signal={signal} onBack={onBack} onPin={() => setPinOpen(true)}
           right={<Scores items={[['SCORE', g.score], ['BEST', best]]} />} />
+        <div className="gbar">
+          <p>Eat the apples and grow longer.</p>
+          <button className="gbtn" onClick={restart}>New Game</button>
+        </div>
 
         <div className="sboard" onPointerDown={swDown} onPointerUp={swUp}>
           <canvas ref={canvas} width={COLS * CELL} height={ROWS * CELL} />
@@ -122,7 +160,7 @@ export default function Snake({ onCode, passLen, signal, onBack }) {
           <button className="down" onClick={() => turn('down')} aria-label="Down">▼</button>
           <button className="right" onClick={() => turn('right')} aria-label="Right">▶</button>
         </div>
-        <p className="ghow"><b>How to play:</b> swipe or use the arrow keys to steer the snake. Eat the red apples to grow, and do not hit the walls or yourself!</p>
+        <p className="ghow"><b>How to play:</b> swipe or use the arrow keys to steer the snake. Do not hit the walls or yourself!</p>
       </div>
     </div>
   );

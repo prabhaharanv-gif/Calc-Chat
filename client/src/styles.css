@@ -437,7 +437,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .pinfull .pinpad { padding: 26px 22px; border-radius: 30px; gap: 22px; background: linear-gradient(160deg, rgba(44,46,52,.97), rgba(20,22,26,.97)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 24px 60px rgba(0,0,0,.5); }
 
 /* Memory */
-.memboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px; aspect-ratio: 1; perspective: 900px; }
+.memboard { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 10px; aspect-ratio: 1; perspective: 900px; }
 .mcard { position: relative; border-radius: 14px; transform-style: preserve-3d; transition: transform .35s; padding: 0; }
 .mcard.up { transform: rotateY(180deg); }
 .mface { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 14px; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
@@ -446,8 +446,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .mcard.done .mback { background: var(--glow-soft); border-color: var(--accent); }
 
 /* Tic Tac Toe */
-.tboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; aspect-ratio: 1; }
-.tcell { border-radius: 18px; background: var(--surface); border: 1px solid var(--glass-b); color: var(--text); padding: 0;
+.tboard { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 10px; aspect-ratio: 1; }
+.tcell { min-width: 0; min-height: 0; overflow: hidden; display: grid; place-items: center; border-radius: 18px; background: var(--surface); border: 1px solid var(--glass-b); color: var(--text); padding: 0;
   font: 700 clamp(2.6rem, 16vw, 4.2rem)/1 'Baloo 2 Variable', 'Inter Variable', sans-serif; }
 .tcell:active { transform: scale(.96); }
 .tcell.mX { color: var(--accent); }
@@ -455,8 +455,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .tstatus { font-weight: 600; }
 
 /* Mines */
-.mboard { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 3px; padding: 6px; aspect-ratio: 1; }
-.mcell { border-radius: 7px; padding: 0; display: grid; place-items: center; font: 700 clamp(.9rem, 4.6vw, 1.35rem) 'Baloo 2 Variable', 'Inter Variable', sans-serif;
+.mboard { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); grid-template-rows: repeat(var(--cols), minmax(0, 1fr)); gap: 3px; padding: 6px; aspect-ratio: 1; }
+.mcell { min-width: 0; min-height: 0; overflow: hidden; border-radius: 7px; padding: 0; display: grid; place-items: center; font: 700 clamp(.9rem, 4.6vw, 1.35rem) 'Baloo 2 Variable', 'Inter Variable', sans-serif;
   background: linear-gradient(160deg, var(--surface), var(--surface2)); border: 1px solid var(--glass-b); color: var(--text); }
 .mcell.open { background: var(--home-bg); border-color: transparent; box-shadow: inset 0 0 0 1px var(--glass-b); }
 .mcell.boom { background: #ff453a66; }
@@ -472,6 +472,17 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 8px 16px -10px var(--glow);
   font: 700 clamp(1.4rem, 8vw, 2.1rem)/1 'Baloo 2 Variable', 'Inter Variable', sans-serif; }
 .stile:active span { filter: brightness(1.15); }
+
+/* Snake: bright lawn in a glass frame (same look as the other games) */
+.sboard { padding: 8px; border-radius: 24px; background: var(--glass); border: 1px solid var(--glass-b); box-shadow: 0 22px 44px -26px var(--glow); }
+.sboard canvas { border-radius: 16px; box-shadow: 0 0 0 1px rgba(0,0,0,.06); }
+.sboard .sover { inset: 8px; border-radius: 16px; background: rgba(24,18,32,.6); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); color: #fff; }
+.sboard .sover.start { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.sboard .pinwrap { inset: 8px; border-radius: 16px; }
+.dpad { grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 58px); gap: 10px; }
+.dpad button { border-radius: 20px; background: var(--glass); border: 1px solid var(--glass-b); color: var(--accent); font-size: 1.25rem;
+  box-shadow: 0 12px 22px -16px var(--glow); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.dpad button:active { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; transform: scale(.95); }
 .icon.off, .icon:disabled { opacity: .45; cursor: not-allowed; }
 .composer input:disabled { opacity: .6; }
 .infopop { left: 12px; top: 66px; width: min(300px, calc(100vw - 24px)); padding: 14px; gap: 6px; }
