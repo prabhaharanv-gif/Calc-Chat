@@ -176,49 +176,74 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [msgs, role]);
 
-  // Scroll down only when a new message arrives (not for reactions/edits).
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs.length]);
-
   const peerName = (role === 'owner' ? presence.guestName : presence.ownerName) || 'Friend';
   const peerOnline = role === 'owner' ? presence.guest : presence.owner;
   const sub = error || (status !== 'online' ? 'Connecting...' : peerOnline ? 'Online' : 'Waiting for the other person');
 
-  const needKey = () => {
-    const k = keyBox.current.key;
-    if (!k) alert('Waiting for your friend to join so the secure key can be set up.');
-    return k;
+  // Messages typed before the friend has joined wait here (in memory only, never saved). They are encrypted and
+  // sent automatically as soon as the shared key exists.
+  const [outbox, setOutbox] = useState([]);
+  const outboxRef = useRef([]);
+  const setBox = (next) => { outboxRef.current = next; setOutbox(next); };
+  const queueItem = (item) => setBox([...outboxRef.current, { pid: `${Date.now()}-${Math.random()}`, ...item }]);
+
+  // Scroll down only when a new message arrives (not for reactions/edits).
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs.length, outbox.length]);
+
+  const transmitText = async (key, t, replyId) => {
+    const payload = await encText(key, t);
+    sock.current?.emit('message', { type: 'text', payload, replyTo: replyId });
   };
+  const transmitBlob = async (key, blob, type, extra, replyId) => {
+    const meta = await encText(key, JSON.stringify({ name: blob.name || '', mime: blob.type || '', ...extra }));
+    const data = await encryptBytes(key, await blob.arrayBuffer());
+    return new Promise((resolve) => {
+      sock.current?.emit('message', { type, data, meta, replyTo: replyId }, (r) => {
+        if (!r?.ok) alert('Could not send (max 25 MB).');
+        resolve();
+      });
+    });
+  };
+
+  // The friend joined (key ready): send everything that was waiting, in order.
+  useEffect(() => {
+    if (!ready || !outboxRef.current.length) return;
+    const items = outboxRef.current;
+    setBox([]);
+    (async () => {
+      const key = keyBox.current.key;
+      if (!key) return;
+      for (const it of items) {
+        if (it.kind === 'text') await transmitText(key, it.text, it.replyId);
+        else await transmitBlob(key, it.blob, it.type, it.extra, it.replyId);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
 
   const sendText = async (e) => {
     e.preventDefault();
     const t = text.trim();
     if (!t) return;
-    const key = needKey();
-    if (!key) return;
-    const payload = await encText(key, t);
+    const key = keyBox.current.key;
     if (editing) {
-      sock.current?.emit('edit', { id: editing.id, payload });
+      if (!key) return;
+      sock.current?.emit('edit', { id: editing.id, payload: await encText(key, t) });
       setEditing(null);
     } else {
-      sock.current?.emit('message', { type: 'text', payload, replyTo: replyTo?.id });
+      if (key) await transmitText(key, t, replyTo?.id);
+      else queueItem({ kind: 'text', text: t, replyId: replyTo?.id });
       setReplyTo(null);
     }
     setText('');
   };
 
   const sendBlob = async (blob, type, extra = {}) => {
-    const key = needKey();
-    if (!key) return;
-    const meta = await encText(key, JSON.stringify({ name: blob.name || '', mime: blob.type || '', ...extra }));
-    const data = await encryptBytes(key, await blob.arrayBuffer());
+    const key = keyBox.current.key;
     const rid = replyTo?.id;
     setReplyTo(null);
-    return new Promise((resolve) => {
-      sock.current.emit('message', { type, data, meta, replyTo: rid }, (r) => {
-        if (!r?.ok) alert('Could not send (max 25 MB).');
-        resolve();
-      });
-    });
+    if (!key) { queueItem({ kind: 'blob', blob, type, extra, replyId: rid }); return; }
+    await transmitBlob(key, blob, type, extra, rid);
   };
 
   const onPick = async (e) => {
@@ -318,11 +343,11 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
       </header>
 
       <div className="msgs">
-        {msgs.length === 0 && (
+        {msgs.length === 0 && outbox.length === 0 && (
           <div className="empty">
             {role === 'owner' ? <>Share your code <b>{code}</b> with a friend to start chatting.</> : 'Say hi 👋'}
             <div className="small">
-              {ready ? 'End-to-end encrypted. ' : 'Chat opens when your friend joins. '}
+              {ready ? 'End-to-end encrypted. ' : 'You can type now; messages are sent when your friend joins. '}
               Messages auto-delete after 4 hours. Nothing is saved.
             </div>
           </div>
@@ -377,6 +402,16 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
             </div>
           );
         })}
+        {outbox.map((o) => (
+          <div key={o.pid} className="bubble me pending">
+            <div className="line">
+              <div className="txt">
+                {o.kind === 'text' ? o.text : o.type === 'image' ? 'Photo' : o.type === 'video' ? 'Video' : o.type === 'audio' ? 'Voice message' : (o.blob.name || 'File')}
+              </div>
+              <div className="time"><span className="waitmark"><Icon name="clock" size={11} />waiting for friend</span></div>
+            </div>
+          </div>
+        ))}
         <div ref={endRef} />
       </div>
 
@@ -393,16 +428,16 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
       )}
 
       <form className="composer" onSubmit={sendText}>
-        <label className={`icon ${ready ? '' : 'off'}`} title="Photo / video / file">
+        <label className="icon" title="Photo / video / file">
           <Icon name="clip" size={20} />
-          <input type="file" accept="image/*,video/*,audio/*,*/*" onChange={onPick} disabled={!ready} hidden />
+          <input type="file" accept="image/*,video/*,audio/*,*/*" onChange={onPick} hidden />
         </label>
-        <input ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} disabled={recording || !ready}
-          placeholder={recording ? '● Recording... tap mic to send' : ready ? 'Type a message' : 'Waiting for your friend to join...'} />
+        <input ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} disabled={recording}
+          placeholder={recording ? '● Recording... tap mic to send' : ready ? 'Type a message' : 'Type a message (sent when your friend joins)'} />
         {text.trim() ? (
           <button className="send">{editing ? 'Save' : 'Send'}</button>
         ) : (
-          <button type="button" className={`icon mic ${recording ? 'rec' : ''}`} onClick={toggleRecord} disabled={!ready}><Icon name="mic" size={20} /></button>
+          <button type="button" className={`icon mic ${recording ? 'rec' : ''}`} onClick={toggleRecord}><Icon name="mic" size={20} /></button>
         )}
       </form>
 
