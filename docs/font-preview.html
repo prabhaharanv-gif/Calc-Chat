@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Font options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Poppins:wght@700&family=Baloo+2:wght@700&family=Lilita+One&family=Press+Start+2P&family=Inter:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; background: #eef6f0; color: #1f3a2a; font-family: 'Inter', system-ui, sans-serif; }
+  h1 { margin: 0 0 4px; font-size: 1.2rem; }
+  p.sub { margin: 0 0 20px; color: #5b7a66; font-size: .9rem; }
+  .grid { display: grid; gap: 16px; max-width: 760px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 20px; padding: 18px 20px 20px; box-shadow: 0 10px 30px -18px rgba(0,0,0,.35); }
+  .num { display: inline-block; font: 700 .8rem 'Inter'; background: #9b1c3c; color: #fff; border-radius: 999px; padding: 3px 12px; margin-bottom: 10px; }
+  .name { font: 500 .85rem 'Inter'; color: #6c7f72; margin-left: 8px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .title { color: #9b1c3c; line-height: 1; margin: 0; }
+  .t2048 { color: #9b1c3c; }
+  .scores { display: flex; gap: 8px; }
+  .score { background: #3f6b4c; color: #fff; border-radius: 10px; padding: 6px 14px; text-align: center; min-width: 64px; }
+  .score span { display: block; font: 700 .6rem 'Inter'; letter-spacing: .08em; color: #cfe9d6; }
+  .score b { font: 700 1.1rem 'Inter'; }
+  .demo { margin-top: 14px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .tile { width: 64px; height: 64px; border-radius: 8px; display: grid; place-items: center; background: #edc22e; color: #fff; font-size: 1.6rem; }
+  .tile.b { background: #f59563; }
+  .over { color: #16231b; background: #16231b0f; border-radius: 12px; padding: 8px 14px; font-size: 1.4rem; }
+  .f1 { font-family: 'Fredoka', sans-serif; font-weight: 600; }
+  .f2 { font-family: 'Poppins', sans-serif; font-weight: 700; }
+  .f3 { font-family: 'Baloo 2', sans-serif; font-weight: 700; }
+  .f4 { font-family: 'Lilita One', sans-serif; font-weight: 400; }
+  .f5 { font-family: 'Press Start 2P', monospace; font-weight: 400; }
+  .big { font-size: 3rem; } .f5.big { font-size: 1.9rem; letter-spacing: -.02em; }
+  .f5 .tile, .tile.f5 { font-size: 1.05rem; }
+</style>
+</head>
+<body>
+  <h1>Pick a font for the games</h1>
+  <p class="sub">The title, the 2048 tiles and the "Game over!" text use it. Scores and the rest of the app stay in Inter.</p>
+  <div class="grid">
+
+    <section class="card">
+      <span class="num">1</span><span class="name">Fredoka (current): soft, rounded, friendly</span>
+      <div class="row"><h2 class="title f1 big">Snake</h2><div class="scores"><div class="score"><span>SCORE</span><b>0</b></div><div class="score"><span>BEST</span><b>200</b></div></div></div>
+      <div class="demo"><h2 class="title f1 big t2048">2048</h2><div class="tile f1 b">128</div><div class="tile f1">2048</div><div class="over f1">Game over!</div></div>
+    </section>
+
+    <section class="card">
+      <span class="num">2</span><span class="name">Poppins: clean, modern, geometric</span>
+      <div class="row"><h2 class="title f2 big">Snake</h2><div class="scores"><div class="score"><span>SCORE</span><b>0</b></div><div class="score"><span>BEST</span><b>200</b></div></div></div>
+      <div class="demo"><h2 class="title f2 big t2048">2048</h2><div class="tile f2 b">128</div><div class="tile f2">2048</div><div class="over f2">Game over!</div></div>
+    </section>
+
+    <section class="card">
+      <span class="num">3</span><span class="name">Baloo 2: bubbly, cartoon-like</span>
+      <div class="row"><h2 class="title f3 big">Snake</h2><div class="scores"><div class="score"><span>SCORE</span><b>0</b></div><div class="score"><span>BEST</span><b>200</b></div></div></div>
+      <div class="demo"><h2 class="title f3 big t2048">2048</h2><div class="tile f3 b">128</div><div class="tile f3">2048</div><div class="over f3">Game over!</div></div>
+    </section>
+
+    <section class="card">
+      <span class="num">4</span><span class="name">Lilita One: chunky, arcade-style</span>
+      <div class="row"><h2 class="title f4 big">Snake</h2><div class="scores"><div class="score"><span>SCORE</span><b>0</b></div><div class="score"><span>BEST</span><b>200</b></div></div></div>
+      <div class="demo"><h2 class="title f4 big t2048">2048</h2><div class="tile f4 b">128</div><div class="tile f4">2048</div><div class="over f4">Game over!</div></div>
+    </section>
+
+    <section class="card">
+      <span class="num">5</span><span class="name">Press Start 2P: retro pixel game</span>
+      <div class="row"><h2 class="title f5 big">Snake</h2><div class="scores"><div class="score"><span>SCORE</span><b>0</b></div><div class="score"><span>BEST</span><b>200</b></div></div></div>
+      <div class="demo"><h2 class="title f5 big t2048">2048</h2><div class="tile f5 b">128</div><div class="tile f5">2048</div><div class="over f5">Game over!</div></div>
+    </section>
+
+  </div>
+</body>
+</html>
