@@ -1,10 +1,10 @@
 # Calc Chat
 
-A private 1:1 chat hidden behind a **2048 game** (or a calculator).
+A private 1:1 chat hidden behind a **Snake game**, a **2048 game** or a calculator (your choice, changeable on the Home screen).
 
 ## How it works
-- **No registration.** First launch: choose your name, a 4-8 digit passcode (stored only on the device, hashed) and the front screen (**Game 2048** or **Calculator**).
-- **Game mode:** play 2048 normally. Hold the **2048 title for 3 seconds** and a hidden PIN pad appears; enter your passcode to open the chat.
+- **No registration.** First launch: choose your name, a 4-8 digit passcode (stored only on the device, hashed) and the front screen (**Snake**, **2048** or **Calculator**).
+- **Game modes:** play normally. Hold the game's **title (Snake / 2048) for 3 seconds** and a hidden PIN pad appears; enter your passcode to open the chat.
 - **Calculator mode:** type the passcode and press `=`.
 - Every device has its own **8-character code**. A friend enters it under "Join a friend" and the two of you share a private chat (max 2 people).
 - **End-to-end encrypted:** each device has an ECDH P-256 key pair. The two devices derive a shared AES-256-GCM key (HKDF, salted with the chat code). Text, photos, voice, video and file names are encrypted on the phone; the server only relays ciphertext. A **safety number** (tap the chat title) can be compared with your friend to detect a man-in-the-middle.
@@ -18,7 +18,7 @@ A private 1:1 chat hidden behind a **2048 game** (or a calculator).
 cd server; npm install; npm start          # http://localhost:4000 (also serves client/dist)
 cd client; npm install; npm run build      # or: npm run dev -> http://localhost:5173
 ```
-Tests: `cd server; node test.mjs` (spins up its own server), `cd client; node e2e-test.mjs; node game-test.mjs; node sha-test.mjs`.
+Tests: `cd server; node test.mjs` (spins up its own server), `cd client; node e2e-test.mjs; node game-test.mjs; node snake-test.mjs; node sha-test.mjs`.
 
 Encryption needs a secure context: `https://` or `http://localhost` (the Android app counts as secure). Plain `http://192.168.x.x` links will not work.
 

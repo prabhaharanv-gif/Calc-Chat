@@ -1,10 +1,10 @@
 # Play Store listing (draft)
 
-**Title (30):** 2048 + Private Chat
-**Short description (80):** 2048 puzzle game with a hidden, end-to-end encrypted private chat.
+**Title (30):** Snake & 2048 + Private Chat
+**Short description (80):** Snake and 2048 games with a hidden, end-to-end encrypted private chat.
 
 **Full description**
-Play the classic 2048 number puzzle. Hold the 2048 title for 3 seconds, enter your secret PIN, and a private chat opens.
+Play classic Snake or the 2048 number puzzle. Hold the game title for 3 seconds, enter your secret PIN, and a private chat opens.
 
 NOTE: This app is a private messenger hidden behind a game. The chat stays hidden until you enter your PIN. You can also choose a calculator as the front screen.
 

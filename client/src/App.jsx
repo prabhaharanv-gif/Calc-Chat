@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import Calculator from './Calculator.jsx';
 import Game2048 from './Game2048.jsx';
+import Snake from './Snake.jsx';
 import Setup from './Setup.jsx';
 import Home from './Home.jsx';
 import { post } from './api.js';
@@ -65,9 +66,9 @@ export default function App() {
   let screen;
   if (!profile.passHash) screen = <Setup onDone={update} />;
   else if (!unlocked) {
-    screen = profile.mode === 'game'
-      ? <Game2048 onCode={onCode} passLen={profile.passLen} />
-      : <Calculator onCode={onCode} />;
+    if (profile.mode === 'game') screen = <Game2048 onCode={onCode} passLen={profile.passLen} />;
+    else if (profile.mode === 'snake') screen = <Snake onCode={onCode} passLen={profile.passLen} />;
+    else screen = <Calculator onCode={onCode} />;
   }
   else screen = <Home profile={profile} update={update} onLock={() => setUnlocked(false)} theme={theme} onTheme={toggleTheme} />;
 

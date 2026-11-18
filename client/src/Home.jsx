@@ -4,6 +4,7 @@ import Icon from './Icon.jsx';
 import { post } from './api.js';
 import { randomCode, randomSecret } from './storage.js';
 import { getIdentity } from './identity.js';
+import { MODES } from './Setup.jsx';
 
 const JOIN_ERRORS = {
   not_found: 'Code not found. Ask your friend to open the app once, then try again.',
@@ -32,6 +33,7 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const frontMode = MODES.some((m) => m.id === profile.mode) ? profile.mode : 'calc';
   const [editing, setEditing] = useState(!profile.name); // ask for a name if none is set yet
   const [nameDraft, setNameDraft] = useState(profile.name || '');
 
@@ -181,13 +183,12 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
         <section className="panel">
           <div className="paneltitle"><Icon name="eyeoff" size={18} /><h3>Front screen</h3></div>
           <div className="seg">
-            <button className={profile.mode === 'game' ? 'on' : ''} onClick={() => update({ mode: 'game' })}>Game (2048)</button>
-            <button className={profile.mode !== 'game' ? 'on' : ''} onClick={() => update({ mode: 'calc' })}>Calculator</button>
+            {MODES.map((m) => (
+              <button key={m.id} className={frontMode === m.id ? 'on' : ''} onClick={() => update({ mode: m.id })}>{m.label}</button>
+            ))}
           </div>
           <p className="muted small" style={{ margin: 0 }}>
-            {profile.mode === 'game'
-              ? 'Lock, then hold the 2048 title for 3 seconds and enter your passcode.'
-              : 'Lock, then type your passcode in the calculator and press =.'}
+            Lock, then: {MODES.find((m) => m.id === frontMode).how}
           </p>
         </section>
 

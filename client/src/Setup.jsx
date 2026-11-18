@@ -2,12 +2,19 @@ import { useState } from 'react';
 import { sha256 } from './sha256.js';
 import { randomSecret } from './storage.js';
 
+export const MODES = [
+  { id: 'snake', label: 'Snake', title: 'Snake', how: <>Hold the <b>Snake</b> title for 3 seconds and enter your passcode to open the chat.</> },
+  { id: 'game', label: '2048', title: '2048', how: <>Hold the <b>2048</b> title for 3 seconds and enter your passcode to open the chat.</> },
+  { id: 'calc', label: 'Calculator', title: 'calculator', how: <>Type your passcode in the calculator and press <b>=</b> to open the chat.</> },
+];
+
 export default function Setup({ onDone }) {
   const [name, setName] = useState('');
-  const [mode, setMode] = useState('game');
+  const [mode, setMode] = useState('snake');
   const [p1, setP1] = useState('');
   const [p2, setP2] = useState('');
   const [err, setErr] = useState('');
+  const current = MODES.find((m) => m.id === mode);
 
   const submit = (e) => {
     e.preventDefault();
@@ -23,15 +30,13 @@ export default function Setup({ onDone }) {
       <form className="card" onSubmit={submit}>
         <h2>Welcome</h2>
         <p className="muted">
-          This app hides a private chat behind a {mode === 'game' ? 'game' : 'calculator'}.{' '}
-          {mode === 'game'
-            ? <>Hold the <b>2048</b> title for 3 seconds and enter your passcode to open the chat.</>
-            : <>Type your passcode in the calculator and press <b>=</b> to open the chat.</>}{' '}
-          After <b>3 wrong tries</b>, all chat messages are deleted.
+          This app hides a private chat behind a {current.title === 'calculator' ? 'calculator' : `${current.title} game`}.{' '}
+          {current.how} After <b>3 wrong tries</b>, all chat messages are deleted.
         </p>
         <div className="seg">
-          <button type="button" className={mode === 'game' ? 'on' : ''} onClick={() => setMode('game')}>Game (2048)</button>
-          <button type="button" className={mode === 'calc' ? 'on' : ''} onClick={() => setMode('calc')}>Calculator</button>
+          {MODES.map((m) => (
+            <button type="button" key={m.id} className={mode === m.id ? 'on' : ''} onClick={() => setMode(m.id)}>{m.label}</button>
+          ))}
         </div>
         <input placeholder="Your name (shown to your friend)" value={name} maxLength={24}
           onChange={(e) => setName(e.target.value)} autoFocus />

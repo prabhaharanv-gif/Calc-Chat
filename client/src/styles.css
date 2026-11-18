@@ -219,6 +219,27 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .gover h2 { margin: 0; font-size: 2.4rem; }
 .ghow { margin: 4px 0 0; font-size: .85rem; line-height: 1.4; }
 
+/* Snake game */
+.snakewrap { background: #0f1a14; color: #cfe9d6; }
+:root[data-theme='light'] .snakewrap { background: #eef6f0; color: #28402f; }
+.snakewrap .gtitle { color: #4ec36b; }
+:root[data-theme='light'] .snakewrap .gtitle { color: #2f9e4f; }
+.snakewrap .gscore { background: #24372c; }
+:root[data-theme='light'] .snakewrap .gscore { background: #3f6b4c; }
+.sboard { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 1; touch-action: none; box-shadow: 0 0 0 4px #24372c; }
+.sboard canvas { display: block; width: 100%; height: 100%; }
+.sover { position: absolute; inset: 0; background: rgba(9,16,12,.72); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #e6f5ea; text-align: center; padding: 16px; }
+.sover h2 { margin: 0; font-size: 2rem; }
+.sover p { margin: 0 0 6px; }
+.snakewrap .gbtn { background: #3f9f5a; color: #fff; }
+.dpad { display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(2, 54px); gap: 8px; justify-content: center; margin-top: 2px; }
+.dpad button { border-radius: 14px; background: #24372c; color: #cfe9d6; font-size: 1.15rem; }
+.dpad button:active { background: #3a5a47; }
+.dpad .up { grid-column: 2; grid-row: 1; }
+.dpad .left { grid-column: 1; grid-row: 2; }
+.dpad .down { grid-column: 2; grid-row: 2; }
+.dpad .right { grid-column: 3; grid-row: 2; }
+
 /* Hidden PIN pad */
 .pinwrap { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; animation: fade .15s ease; }
 .pinpad { background: #26241f; border-radius: 22px; padding: 22px 20px 20px; width: min(300px, 88vw); display: flex; flex-direction: column; align-items: center; gap: 18px; }
