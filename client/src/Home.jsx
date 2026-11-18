@@ -231,14 +231,6 @@ export default function Home({ profile, update, onLock, theme, onTheme, activeRo
               </section>
 
               <section className="hm-group">
-                <h4>Open the chat</h4>
-                <div className="hm-row">
-                  <span className="hm-pi"><Icon name="grid" size={16} /></span>
-                  <span className="hm-v">Hold any game title for 3 seconds, then enter your passcode</span>
-                </div>
-              </section>
-
-              <section className="hm-group">
                 <h4>Message signal</h4>
                 <div className="hm-row">
                   <span className="hm-pi"><Icon name="message" size={16} /></span>
@@ -250,7 +242,7 @@ export default function Home({ profile, update, onLock, theme, onTheme, activeRo
                 </div>
               </section>
 
-              <section className="hm-group">
+              <section className="hm-group hm-privacy">
                 <h4>Privacy</h4>
                 {PRIVACY.map(([icon, text]) => (
                   <div className="hm-row" key={text}>

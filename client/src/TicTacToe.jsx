@@ -56,12 +56,12 @@ export default function TicTacToe({ onCode, passLen, signal, onBack }) {
           <button className="gbtn" onClick={restart}>New Game</button>
         </div>
 
-        <div className="gbox tboard">
+        <div className="bwrap"><div className="gbox tboard">
           {board.map((v, i) => (
             <button key={i} className={`tcell ${v ? `m${v}` : ''}`} onClick={() => play(i)} aria-label={v || 'Empty'}>{v}</button>
           ))}
           {pinOpen && <PinPad passLen={passLen} onCode={onCode} onClose={() => setPinOpen(false)} />}
-        </div>
+        </div></div>
         <p className="ghow"><b>How to play:</b> get three in a row (across, down or diagonal) before the computer does.</p>
       </div>
     </div>

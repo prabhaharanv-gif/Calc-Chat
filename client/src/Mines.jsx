@@ -32,7 +32,7 @@ export default function Mines({ onCode, passLen, signal, onBack }) {
           <button className="gbtn" onClick={restart}>New Game</button>
         </div>
 
-        <div className="gbox mboard" style={{ '--cols': COLS }}>
+        <div className="bwrap"><div className="gbox mboard" style={{ '--cols': COLS }}>
           {g.cells.map((c, i) => (
             <button key={i} className={`mcell ${c.open ? 'open' : ''} ${c.open && c.mine ? 'boom' : ''} n${c.n}`}
               onClick={() => tap(i)} onContextMenu={(e) => rightClick(e, i)}
@@ -48,7 +48,7 @@ export default function Mines({ onCode, passLen, signal, onBack }) {
               <button className="gbtn" onClick={restart}>Play again</button>
             </div>
           )}
-        </div>
+        </div></div>
         <p className="ghow"><b>How to play:</b> tap a square to dig. Numbers tell how many mines touch it. Switch to Flag (or right-click) to mark mines. Open every safe square to win.</p>
       </div>
     </div>

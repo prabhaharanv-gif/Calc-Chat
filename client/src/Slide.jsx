@@ -32,7 +32,7 @@ export default function Slide({ onCode, passLen, signal, onBack }) {
           <button className="gbtn" onClick={restart}>Shuffle</button>
         </div>
 
-        <div className="gbox sboard2">
+        <div className="bwrap"><div className="gbox sboard2">
           {order.map(({ v, i }) => (
             <button key={v} className="stile" style={{ transform: `translate(${(i % N) * 100}%, ${Math.floor(i / N) * 100}%)` }}
               onClick={() => !pinOpen && setP((s) => tap(s, i))}>
@@ -47,7 +47,7 @@ export default function Slide({ onCode, passLen, signal, onBack }) {
               <button className="gbtn" onClick={restart}>Play again</button>
             </div>
           )}
-        </div>
+        </div></div>
         <p className="ghow"><b>How to play:</b> tap a tile next to the empty square (or in line with it) to slide it. Finish with 1 to 15 in order.</p>
       </div>
     </div>

@@ -20,7 +20,7 @@ function draw(canvas, g) {
   // bright lawn
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
-      ctx.fillStyle = (x + y) % 2 ? '#aadb59' : '#b6e467';
+      ctx.fillStyle = (x + y) % 2 ? '#f0d0db' : '#f8e4eb';
       ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
     }
   }
@@ -37,13 +37,13 @@ function draw(canvas, g) {
     ctx.fillStyle = 'rgba(0,0,0,.16)';
     ctx.beginPath(); ctx.ellipse(cx + 1.5, cy + CELL * 0.34, CELL * 0.3, CELL * 0.1, 0, 0, Math.PI * 2); ctx.fill();
     const grad = ctx.createRadialGradient(cx - 4, cy - 5, 2, cx, cy, CELL * 0.4);
-    grad.addColorStop(0, '#ff8a8a');
-    grad.addColorStop(1, '#e5252a');
+    grad.addColorStop(0, '#ffd77d');
+    grad.addColorStop(1, '#f08400');
     ctx.fillStyle = grad;
     ctx.beginPath(); ctx.arc(cx, cy, CELL * 0.36, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,.7)';
     ctx.beginPath(); ctx.ellipse(cx - 5, cy - 5, 3.2, 2, -0.6, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#3f9b3a';
+    ctx.fillStyle = '#8c2150';
     ctx.beginPath(); ctx.ellipse(cx + 3, cy - CELL * 0.4, 5, 2.6, -0.5, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#6b4a2b'; ctx.lineWidth = 2; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(cx, cy - CELL * 0.3); ctx.lineTo(cx - 1, cy - CELL * 0.45); ctx.stroke();
@@ -54,15 +54,15 @@ function draw(canvas, g) {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.lineWidth = CELL * 0.82; path(ctx, pts, 1.5, 2.5);
-  ctx.strokeStyle = '#2f6df0'; ctx.lineWidth = CELL * 0.8; path(ctx, pts);
-  ctx.strokeStyle = '#4f8bff'; ctx.lineWidth = CELL * 0.58; path(ctx, pts);
+  ctx.strokeStyle = '#7a1740'; ctx.lineWidth = CELL * 0.8; path(ctx, pts);
+  ctx.strokeStyle = '#b92c5f'; ctx.lineWidth = CELL * 0.58; path(ctx, pts);
   ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = CELL * 0.14; path(ctx, pts, -2, -3);
 
   // head + eyes
   const [hx, hy] = pts[0];
-  ctx.fillStyle = '#2f6df0';
+  ctx.fillStyle = '#7a1740';
   ctx.beginPath(); ctx.arc(hx, hy, CELL * 0.46, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#4f8bff';
+  ctx.fillStyle = '#b92c5f';
   ctx.beginPath(); ctx.arc(hx - 1, hy - 1.5, CELL * 0.34, 0, Math.PI * 2); ctx.fill();
   const look = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] }[g.dir];
   const side = [-look[1], look[0]];
@@ -71,7 +71,7 @@ function draw(canvas, g) {
     const ey = hy + look[1] * 5 + side[1] * k * 6;
     ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.arc(ex, ey, 4.2, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#17233f';
+    ctx.fillStyle = '#2a0d1b';
     ctx.beginPath(); ctx.arc(ex + look[0] * 1.6, ey + look[1] * 1.6, 2.1, 0, Math.PI * 2); ctx.fill();
   });
 }
@@ -141,7 +141,7 @@ export default function Snake({ onCode, passLen, signal, onBack }) {
           <button className="gbtn" onClick={restart}>New Game</button>
         </div>
 
-        <div className="sboard" onPointerDown={swDown} onPointerUp={swUp}>
+        <div className="bwrap"><div className="sboard" onPointerDown={swDown} onPointerUp={swUp}>
           <canvas ref={canvas} width={COLS * CELL} height={ROWS * CELL} />
           {pinOpen && <PinPad passLen={passLen} onCode={onCode} onClose={() => setPinOpen(false)} />}
           {!running && !g.over && <div className="sover start"><b>Tap or press an arrow key to start</b></div>}
@@ -152,7 +152,7 @@ export default function Snake({ onCode, passLen, signal, onBack }) {
               <button className="gbtn" onClick={restart}>Play again</button>
             </div>
           )}
-        </div>
+        </div></div>
 
         <div className="dpad">
           <button className="up" onClick={() => turn('up')} aria-label="Up">▲</button>

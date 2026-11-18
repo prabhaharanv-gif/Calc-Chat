@@ -37,7 +37,7 @@ export default function Memory({ onCode, passLen, signal, onBack }) {
           <button className="gbtn" onClick={restart}>New Game</button>
         </div>
 
-        <div className="gbox memboard">
+        <div className="bwrap"><div className="gbox memboard">
           {g.cards.map((c, i) => (
             <button key={c.id} className={`mcard ${c.up || c.done ? 'up' : ''} ${c.done ? 'done' : ''}`}
               onClick={() => !pinOpen && setG((s) => flip(s, i))} aria-label={c.up || c.done ? c.face : 'Hidden card'}>
@@ -53,7 +53,7 @@ export default function Memory({ onCode, passLen, signal, onBack }) {
               <button className="gbtn" onClick={restart}>Play again</button>
             </div>
           )}
-        </div>
+        </div></div>
         <p className="ghow"><b>How to play:</b> tap two cards to flip them. If they match they stay open. Match all 8 pairs in as few moves as you can.</p>
       </div>
     </div>

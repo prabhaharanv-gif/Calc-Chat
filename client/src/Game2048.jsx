@@ -47,7 +47,7 @@ export default function Game2048({ onCode, passLen, signal, onBack }) {
   const showWin = game.won && !keepGoing && !game.over;
 
   return (
-    <div className="gamewrap">
+    <div className="gamewrap themed">
       <div className="game">
         <GameHeader title="2048" signal={signal} onBack={onBack} onPin={() => setPinOpen(true)}
           right={<Scores items={[['SCORE', game.score], ['BEST', best]]} />} />
@@ -56,7 +56,7 @@ export default function Game2048({ onCode, passLen, signal, onBack }) {
           <button className="gbtn" onClick={restart}>New Game</button>
         </div>
 
-        <div className="gboard" onPointerDown={swDown} onPointerUp={swUp}>
+        <div className="bwrap"><div className="gboard" onPointerDown={swDown} onPointerUp={swUp}>
           {game.grid.flat().map((v, i) => (
             <div className="gcell" key={i}>
               {v ? <div key={v} className={`gtile t${v > 2048 ? 'big' : v}`}>{v}</div> : null}
@@ -72,7 +72,7 @@ export default function Game2048({ onCode, passLen, signal, onBack }) {
               </div>
             </div>
           )}
-        </div>
+        </div></div>
 
         <p className="ghow"><b>How to play:</b> swipe (or use the arrow keys) to move the tiles. When two tiles with the same number touch, they merge into one!</p>
       </div>
