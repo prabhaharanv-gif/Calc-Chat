@@ -5,7 +5,6 @@ import { post } from './api.js';
 import { randomCode, randomSecret } from './storage.js';
 import { getIdentity } from './identity.js';
 import { MODES } from './Setup.jsx';
-import { ensurePermission } from './notify.js';
 
 const JOIN_ERRORS = {
   not_found: 'Code not found. Ask your friend to open the app once, then try again.',
@@ -41,7 +40,7 @@ function Tiles({ code, small }) {
   );
 }
 
-export default function Home({ profile, update, onLock, theme, onTheme, activeRoom, jump }) {
+export default function Home({ profile, update, onLock, theme, onTheme, activeRoom, jump, onSeen }) {
   const [view, setView] = useState(null); // null | 'owner' | 'guest'
   const [tab, setTab] = useState(profile.name ? 'chat' : 'settings');
   const [joinInput, setJoinInput] = useState('');
@@ -69,12 +68,12 @@ export default function Home({ profile, update, onLock, theme, onTheme, activeRo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jump?.id]);
 
-  const toggleNotify = async () => {
-    if (profile.notify === true) { update({ notify: false }); return; }
-    update({ notify: true });
-    const ok = await ensurePermission();
-    if (ok) flash('Message alerts are on');
-    else flash('In-app alerts are on. Allow notifications in your phone/browser settings for alerts when the app is closed.', true);
+  const signalOn = profile.notify !== false;
+  const toggleSignal = () => update({ notify: !signalOn });
+  const signalHint = {
+    snake: 'The "Snake" title turns green when a message is waiting (maroon = none).',
+    game: 'The "2048" title turns green when a message is waiting (maroon = none).',
+    calc: 'The calculator display turns green when a message is waiting.',
   };
 
   const host = useCallback(async () => {
@@ -134,11 +133,11 @@ export default function Home({ profile, update, onLock, theme, onTheme, activeRo
 
   if (view === 'owner') {
     return <Chat role="owner" code={profile.ownCode} secret={profile.ownSecret} name={profile.name}
-      onBack={() => setView(null)} onLock={onLock} theme={theme} onTheme={onTheme} />;
+      onBack={() => setView(null)} onLock={onLock} theme={theme} onTheme={onTheme} onSeen={onSeen} />;
   }
   if (view === 'guest' && profile.joined) {
     return <Chat role="guest" code={profile.joined.code} secret={profile.joined.secret}
-      name={profile.name} onBack={() => setView(null)} onLock={onLock} theme={theme} onTheme={onTheme} />;
+      name={profile.name} onBack={() => setView(null)} onLock={onLock} theme={theme} onTheme={onTheme} onSeen={onSeen} />;
   }
 
   return (
@@ -251,12 +250,14 @@ export default function Home({ profile, update, onLock, theme, onTheme, activeRo
               </section>
 
               <section className="hm-group">
-                <h4>Alerts</h4>
+                <h4>Message signal</h4>
                 <div className="hm-row">
                   <span className="hm-pi"><Icon name="message" size={16} /></span>
-                  <span className="hm-v grow">New message alerts</span>
-                  <button className={`hm-switch ${profile.notify === true ? 'on' : ''}`} onClick={toggleNotify}
-                    role="switch" aria-checked={profile.notify === true} aria-label="New message alerts" />
+                  <span className="hm-v grow">Secret signal
+                    <small>{signalHint[frontMode]}</small>
+                  </span>
+                  <button className={`hm-switch ${signalOn ? 'on' : ''}`} onClick={toggleSignal}
+                    role="switch" aria-checked={signalOn} aria-label="Secret message signal" />
                 </div>
               </section>
 

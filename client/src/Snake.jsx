@@ -41,7 +41,7 @@ function draw(canvas, g) {
   }
 }
 
-export default function Snake({ onCode, passLen }) {
+export default function Snake({ onCode, passLen, signal }) {
   const [g, setG] = useState(() => newState());
   const [running, setRunning] = useState(false);
   const [best, setBest] = useState(readBest);
@@ -101,7 +101,7 @@ export default function Snake({ onCode, passLen }) {
     <div className="gamewrap snakewrap">
       <div className="game">
         <div className="ghead">
-          <h1 className="gtitle" {...longPress}>Snake</h1>
+          <h1 className={`gtitle ${signal ? 'sig' : ''}`} {...longPress}>Snake</h1>
           <div className="gscores">
             <div className="gscore"><span>SCORE</span><b>{g.score}</b></div>
             <div className="gscore"><span>BEST</span><b>{best}</b></div>

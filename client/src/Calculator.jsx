@@ -30,7 +30,7 @@ function evaluate(expr) {
 
 const KEYS = ['C', '⌫', '%', '÷', '7', '8', '9', '×', '4', '5', '6', '-', '1', '2', '3', '+', '0', '.', '='];
 
-export default function Calculator({ onCode }) {
+export default function Calculator({ onCode, signal }) {
   const [expr, setExpr] = useState('');
   const [result, setResult] = useState('');
   const [typed, setTyped] = useState(false); // true only if the digits were typed by hand
@@ -79,7 +79,7 @@ export default function Calculator({ onCode }) {
   return (
     <div className="calc">
       <div className="display">
-        <div className="main">{expr || result || '0'}</div>
+        <div className={`main ${signal ? 'sig' : ''}`}>{expr || result || '0'}</div>
       </div>
       <div className="keys">
         {KEYS.map((k) => (

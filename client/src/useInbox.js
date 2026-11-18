@@ -25,7 +25,9 @@ export function useInbox(profile, armed, onPing) {
         const s = io(SERVER || undefined, {
           auth: { code: r.code, secret: r.secret, name: profile.name, pub: id?.pubJson, inbox: true },
         });
-        s.on('ping', (p) => { if (p?.from !== r.role) cb.current({ role: r.role, name: p?.name }); });
+        s.on('ping', (p) => {
+          if (p?.from !== r.role) cb.current({ role: r.role, name: p?.name, time: p?.time, replay: p?.replay === true });
+        });
         s.on('connect_error', async (e) => {
           if (e.message === 'no_room' && r.role === 'owner') {
             try {

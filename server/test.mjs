@@ -85,13 +85,22 @@ try {
   });
   await emit(b, txt('ping-test'));
   await wait(250);
-  assert.deepEqual(inbox.pings.at(-1), { from: 'guest', name: 'bBob/b' }, 'inbox gets who sent it, nothing else');
+  const ping = inbox.pings.at(-1);
+  assert.deepEqual({ from: ping.from, name: ping.name, replay: ping.replay }, { from: 'guest', name: 'bBob/b', replay: undefined }, 'inbox gets who sent it, nothing else');
+  assert.equal(typeof ping.time, 'number');
   assert.ok(!inbox.events.includes('message') && !inbox.events.includes('history') && !inbox.events.includes('presence'), 'inbox never receives chat content or presence');
   inbox.disconnect();
   await wait(200);
   assert.equal(a.presence.owner, true, 'owner still shown online via the real chat socket');
-  const msgCountBefore = a.msgs.length;
-  console.log('ok  inbox ping (no content, no presence)');
+  // A freshly connected inbox is told about the newest message from the other person (unread signal), flagged as a replay.
+  const inbox2 = await new Promise((res, rej) => {
+    const s = io(base, { auth: { code: CODE, secret: OWN, inbox: true }, transports: ['websocket'] });
+    s.pings = []; s.on('ping', (p) => s.pings.push(p)); s.on('connect', () => res(s)); s.on('connect_error', rej);
+  });
+  await wait(250);
+  assert.equal(inbox2.pings.length, 1); assert.equal(inbox2.pings[0].replay, true); assert.equal(inbox2.pings[0].time, ping.time);
+  inbox2.disconnect();
+  console.log('ok  inbox ping (no content, no presence) + replay for unread signal');
 
   // reactions / reply / edit / delete
   const m0 = a.msgs[0];

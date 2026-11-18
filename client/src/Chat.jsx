@@ -37,7 +37,7 @@ async function open(m, key) {
   }
 }
 
-export default function Chat({ role, code, secret, name, onBack, onLock, theme, onTheme }) {
+export default function Chat({ role, code, secret, name, onBack, onLock, theme, onTheme, onSeen }) {
   const [msgs, setMsgs] = useState([]);
   const [text, setText] = useState('');
   const [status, setStatus] = useState('connecting');
@@ -167,6 +167,14 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, secret, role]);
+
+  // Everything from the friend that is on screen counts as read (turns the front-screen signal back off).
+  useEffect(() => {
+    let t = 0;
+    for (const m of msgs) if (m.from !== role && m.time > t) t = m.time;
+    if (t) onSeen?.(role, t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msgs, role]);
 
   // Scroll down only when a new message arrives (not for reactions/edits).
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs.length]);

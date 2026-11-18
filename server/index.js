@@ -190,6 +190,9 @@ io.on('connection', (socket) => {
   room.touched = Date.now();
   if (socket.data.inbox) {
     socket.join(`${code}:inbox`);
+    // A device that just connected learns about the newest message from the other person (for the "unread" signal).
+    const last = [...room.messages].reverse().find((m) => m.from !== role && m.expiresAt > Date.now());
+    if (last) socket.emit('ping', { from: last.from, name: room.names[last.from], time: last.time, replay: true });
     return;
   }
   socket.join(code);
@@ -222,7 +225,7 @@ io.on('connection', (socket) => {
     }
     io.to(code).emit('message', msg);
     // Tiny notification ping for devices that are not inside the chat (no message content).
-    io.to(`${code}:inbox`).emit('ping', { from: role, name: r.names[role] });
+    io.to(`${code}:inbox`).emit('ping', { from: role, name: r.names[role], time: now });
     ack?.({ ok: true });
   });
 

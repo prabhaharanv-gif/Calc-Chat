@@ -5,7 +5,7 @@ import PinPad, { useLongPress } from './PinPad.jsx';
 const KEYS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', a: 'left', d: 'right', w: 'up', s: 'down' };
 const readBest = () => { try { return Number(localStorage.getItem('g2048_best')) || 0; } catch { return 0; } };
 
-export default function Game2048({ onCode, passLen }) {
+export default function Game2048({ onCode, passLen, signal }) {
   const [game, setGame] = useState(newGame);
   const [best, setBest] = useState(readBest);
   const [keepGoing, setKeepGoing] = useState(false);
@@ -50,7 +50,7 @@ export default function Game2048({ onCode, passLen }) {
     <div className="gamewrap">
       <div className="game">
         <div className="ghead">
-          <h1 className="gtitle" {...longPress}>2048</h1>
+          <h1 className={`gtitle ${signal ? 'sig' : ''}`} {...longPress}>2048</h1>
           <div className="gscores">
             <div className="gscore"><span>SCORE</span><b>{game.score}</b></div>
             <div className="gscore"><span>BEST</span><b>{best}</b></div>

@@ -393,6 +393,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .notice b { font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .notice small { font-size: .76rem; opacity: .7; }
 .notice-x { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.1); flex: none; }
+
+/* Secret message signal on the front screen: maroon title = nothing new, green title = a message is waiting. */
+.gamewrap .gtitle, :root[data-theme] .gamewrap .gtitle { color: var(--accent); transition: color .5s ease; }
+.gamewrap .gtitle.sig, :root[data-theme] .gamewrap .gtitle.sig { color: #2fb457; }
+.calc .display .main { transition: color .5s ease; }
+.calc .display .main.sig { color: #2fb457; }
+.hm-v small { display: block; margin-top: 2px; font-weight: 400; font-size: .74rem; line-height: 1.3; color: var(--muted); }
 .icon.off, .icon:disabled { opacity: .45; cursor: not-allowed; }
 .composer input:disabled { opacity: .6; }
 .infopop { left: 12px; top: 66px; width: min(300px, calc(100vw - 24px)); padding: 14px; gap: 6px; }

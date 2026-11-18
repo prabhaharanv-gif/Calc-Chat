@@ -9,40 +9,21 @@ import { sha256 } from './sha256.js';
 import { initProfile, load, save } from './storage.js';
 import { useScreenGuard } from './useScreenGuard.js';
 import { useInbox } from './useInbox.js';
-import { showSystemNotification } from './notify.js';
 import Icon from './Icon.jsx';
+
+const FOUR_HOURS = 4 * 60 * 60 * 1000;
 
 export default function App() {
   const [profile, setProfile] = useState(initProfile);
   const [unlocked, setUnlocked] = useState(false);
-  const [armed, setArmed] = useState(false); // true after the first unlock: inbox stays connected even when locked
-  const [notice, setNotice] = useState(null); // in-app "new message" banner
+  const [notice, setNotice] = useState(null); // in-app banner (only inside the unlocked area)
   const [jump, setJump] = useState(null); // asks Home to open a chat (from the banner)
+  const [pings, setPings] = useState({ owner: 0, guest: 0 }); // time of the newest message from the friend, per chat
   const hidden = useScreenGuard();
   const unlockedRef = useRef(false);
   const activeRoom = useRef(null); // which chat is open right now ('owner' | 'guest' | null)
   const noticeTimer = useRef(null);
-  useEffect(() => { unlockedRef.current = unlocked; if (unlocked) setArmed(true); }, [unlocked]);
-
-  // A friend sent a message. Never shows content.
-  const onPing = useCallback(({ role, name }) => {
-    if (load().notify !== true) return;
-    const visible = !document.hidden;
-    if (unlockedRef.current && visible) {
-      if (activeRoom.current === role) return; // already looking at that chat
-      setNotice({ role, name });
-      clearTimeout(noticeTimer.current);
-      noticeTimer.current = setTimeout(() => setNotice(null), 6000);
-    } else {
-      showSystemNotification(); // app is locked or in the background
-    }
-  }, []);
-  useInbox(profile, armed && !!profile.passHash, onPing);
-  useEffect(() => { if (!unlocked) setNotice(null); }, [unlocked]);
-  const openFromNotice = () => {
-    if (notice) setJump({ role: notice.role, id: Date.now() });
-    setNotice(null);
-  };
+  useEffect(() => { unlockedRef.current = unlocked; }, [unlocked]);
 
   const update = useCallback((patch) => setProfile(save(patch)), []);
 
@@ -51,6 +32,39 @@ export default function App() {
     || (window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   const toggleTheme = useCallback(() => update({ theme: theme === 'dark' ? 'light' : 'dark' }), [theme, update]);
+
+  // ---- secret "message waiting" signal ----
+  // The inbox keeps listening (even before unlock). When a friend's message is newer than the last one
+  // you opened, the front screen shows a green title. Content is never involved.
+  const onPing = useCallback(({ role, name, time, replay }) => {
+    setPings((p) => ({ ...p, [role]: Math.max(p[role] || 0, time || Date.now()) }));
+    if (replay || load().notify === false) return;
+    if (unlockedRef.current && !document.hidden && activeRoom.current !== role) {
+      setNotice({ role, name });
+      clearTimeout(noticeTimer.current);
+      noticeTimer.current = setTimeout(() => setNotice(null), 6000);
+    }
+  }, []);
+  useInbox(profile, !!profile.passHash, onPing);
+  // A new code / a different friend starts fresh.
+  useEffect(() => { setPings((p) => ({ ...p, owner: 0 })); }, [profile.ownCode]);
+  useEffect(() => { setPings((p) => ({ ...p, guest: 0 })); }, [profile.joined?.code]);
+  useEffect(() => { if (!unlocked) setNotice(null); }, [unlocked]);
+
+  // The chat screen calls this when it shows the friend's newest message.
+  const markSeen = useCallback((role, time) => {
+    const seen = load().seen || {};
+    if ((seen[role] || 0) >= time) return;
+    setProfile(save({ seen: { ...seen, [role]: time } }));
+  }, []);
+
+  const waiting = (role) => Date.now() - pings[role] < FOUR_HOURS && pings[role] > (profile.seen?.[role] || 0);
+  const signal = profile.notify !== false && (waiting('owner') || (!!profile.joined && waiting('guest')));
+
+  const openFromNotice = () => {
+    if (notice) setJump({ role: notice.role, id: Date.now() });
+    setNotice(null);
+  };
 
   // Delete all messages of every chat this device is part of (both sides).
   const wipeAll = useCallback(async () => {
@@ -96,14 +110,13 @@ export default function App() {
   let screen;
   if (!profile.passHash) screen = <Setup onDone={update} />;
   else if (!unlocked) {
-    if (profile.mode === 'game') screen = <Game2048 onCode={onCode} passLen={profile.passLen} />;
-    else if (profile.mode === 'snake') screen = <Snake onCode={onCode} passLen={profile.passLen} />;
-    else screen = <Calculator onCode={onCode} />;
-  }
-  else {
+    if (profile.mode === 'game') screen = <Game2048 onCode={onCode} passLen={profile.passLen} signal={signal} />;
+    else if (profile.mode === 'snake') screen = <Snake onCode={onCode} passLen={profile.passLen} signal={signal} />;
+    else screen = <Calculator onCode={onCode} signal={signal} />;
+  } else {
     screen = (
       <Home profile={profile} update={update} onLock={() => setUnlocked(false)} theme={theme} onTheme={toggleTheme}
-        activeRoom={activeRoom} jump={jump} />
+        activeRoom={activeRoom} jump={jump} onSeen={markSeen} />
     );
   }
 
