@@ -2,7 +2,7 @@
 
 Last updated: [DATE]
 
-**What the app is.** A private two-person chat. The app is presented as a calculator; a passcode set by you opens the chat.
+**What the app is.** A private two-person chat. The app is presented as a 2048 game (or a calculator); a passcode set by you opens the chat.
 
 **Accounts.** None. We do not ask for your name, phone number or email.
 
@@ -12,7 +12,7 @@ Last updated: [DATE]
 
 **Sharing.** We do not sell or share data, show ads, or use analytics or trackers. Content is visible only to the two people in a chat and, technically, to the server operator while it is in memory.
 
-**Security.** Traffic uses HTTPS. The Android app blocks screenshots and screen recording. Messages are not end-to-end encrypted.
+**Security.** Traffic uses HTTPS. Message text, photos, voice notes, videos and file names are end-to-end encrypted on the devices (AES-256-GCM with a key agreed between the two devices); the server relays ciphertext it cannot read. The server can see metadata such as which devices share a chat, message times and sizes, reactions and display names. The Android app blocks screenshots and screen recording.
 
 **Permissions.** Microphone (voice messages), file access via the system picker (photos/videos you choose).
 

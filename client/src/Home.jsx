@@ -3,6 +3,7 @@ import Chat from './Chat.jsx';
 import Icon from './Icon.jsx';
 import { post } from './api.js';
 import { randomCode, randomSecret } from './storage.js';
+import { getIdentity } from './identity.js';
 
 const JOIN_ERRORS = {
   not_found: 'Code not found. Ask your friend to open the app once, then try again.',
@@ -44,10 +45,11 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
 
   const host = useCallback(async () => {
     try {
-      const r = await post('/api/host', { code: profile.ownCode, secret: profile.ownSecret });
+      const id = await getIdentity();
+      const r = await post('/api/host', { code: profile.ownCode, secret: profile.ownSecret, name: profile.name, pub: id?.pubJson });
       setMsg(r.ok ? '' : 'Server problem. Try again.');
     } catch { setMsg('Cannot reach server.'); }
-  }, [profile.ownCode, profile.ownSecret]);
+  }, [profile.ownCode, profile.ownSecret, profile.name]);
 
   useEffect(() => { host(); }, [host]);
 
@@ -73,7 +75,8 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
     setBusy(true);
     try {
       const secret = randomSecret();
-      const r = await post('/api/join', { code, secret });
+      const id = await getIdentity();
+      const r = await post('/api/join', { code, secret, name: profile.name, pub: id?.pubJson });
       if (r.ok) {
         update({ joined: { code, secret } });
         setJoinInput('');
@@ -115,7 +118,7 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
       </header>
 
       <div className="home">
-        <section className="me">
+        <section className="profilecard">
           <div className="grow">
             <div className="muted small">Your name</div>
             {editing ? (
@@ -174,6 +177,19 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
         </section>
 
         {msg && <div className="err center-text">{msg}</div>}
+
+        <section className="panel">
+          <div className="paneltitle"><Icon name="eyeoff" size={18} /><h3>Front screen</h3></div>
+          <div className="seg">
+            <button className={profile.mode === 'game' ? 'on' : ''} onClick={() => update({ mode: 'game' })}>Game (2048)</button>
+            <button className={profile.mode !== 'game' ? 'on' : ''} onClick={() => update({ mode: 'calc' })}>Calculator</button>
+          </div>
+          <p className="muted small" style={{ margin: 0 }}>
+            {profile.mode === 'game'
+              ? 'Lock, then hold the 2048 title for 3 seconds and enter your passcode.'
+              : 'Lock, then type your passcode in the calculator and press =.'}
+          </p>
+        </section>
 
         <ul className="perks">
           <li><Icon name="eyeoff" size={20} /><span>No account</span></li>

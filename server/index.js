@@ -1,5 +1,7 @@
 // Calc Chat server. Nothing is ever written to disk or a database:
 // rooms and messages live only in RAM and auto-expire.
+// Message content (text, media bytes, file names) is END-TO-END ENCRYPTED by the
+// clients: this server only relays opaque ciphertext plus minimal metadata.
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
@@ -15,9 +17,13 @@ const MSG_TTL = Number(process.env.MSG_TTL_MS) || 4 * 60 * 60 * 1000; // 4 hours
 const SWEEP_MS = Number(process.env.SWEEP_MS) || 30 * 1000;
 const ROOM_IDLE = 24 * 60 * 60 * 1000; // empty room with no messages is forgotten after 24h
 const MAX_FILE = 25 * 1024 * 1024; // 25 MB per media message
+const MAX_TEXT = 20000; // bytes of encrypted text per message
+const MAX_META = 2000; // bytes of encrypted media metadata
 const ROOM_CAP = 200 * 1024 * 1024; // 200 MB of media per room (oldest dropped first)
+const MSG_TYPES = ['text', 'image', 'audio', 'video', 'file'];
+const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
-/** code -> { ownerHash, guestHash|null, messages[], touched } */
+/** code -> { ownerHash, guestHash|null, messages[], names, pubs, touched } */
 const rooms = new Map();
 
 const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
@@ -32,6 +38,19 @@ const roleOf = (room, secret) => {
   if (room.guestHash && same(room.guestHash, h)) return 'guest';
   return null;
 };
+const toBuf = (v) =>
+  Buffer.isBuffer(v) ? v : v instanceof ArrayBuffer ? Buffer.from(v)
+    : ArrayBuffer.isView(v) ? Buffer.from(v.buffer, v.byteOffset, v.byteLength) : null;
+
+// Display names are optional, kept in RAM only, and shown to the other person.
+const cleanName = (n) => String(n || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 24);
+// Public keys (ECDH P-256 JWK as a JSON string) are relayed so the two devices can derive a shared secret.
+const cleanPub = (p) => (typeof p === 'string' && p.length > 0 && p.length <= 400 ? p : '');
+
+const newRoom = (ownerHash) => ({
+  ownerHash, guestHash: null, messages: [], touched: Date.now(),
+  names: { owner: '', guest: '' }, pubs: { owner: '', guest: '' },
+});
 
 const app = express();
 app.disable('x-powered-by');
@@ -57,13 +76,6 @@ const io = new Server(server, {
   pingTimeout: 60000,
 });
 
-const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
-const LABELS = { image: 'Photo', video: 'Video', audio: 'Voice message', file: 'File' };
-const snippet = (m) => (m.type === 'text' ? m.text.slice(0, 100) : LABELS[m.type] || 'Message');
-
-// Display names are optional, kept in RAM only, and shown to the other person.
-const cleanName = (n) => String(n || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 24);
-
 async function presence(code) {
   const room = rooms.get(code);
   if (!room) return;
@@ -74,21 +86,26 @@ async function presence(code) {
     guest: roles.has('guest'),
     ownerName: room.names.owner,
     guestName: room.names.guest,
+    ownerPub: room.pubs.owner,
+    guestPub: room.pubs.guest,
   });
 }
 
 // Owner registers (or re-registers after a server restart) their room.
 app.post('/api/host', (req, res) => {
   if (limited(req, 60)) return res.status(429).json({ error: 'rate' });
-  const { code, secret } = req.body || {};
+  const { code, secret, name, pub } = req.body || {};
   if (!validCode(code) || !validSecret(secret)) return res.status(400).json({ error: 'bad_request' });
   let room = rooms.get(code);
   if (!room) {
-    room = { ownerHash: sha(secret), guestHash: null, messages: [], names: { owner: '', guest: '' }, touched: Date.now() };
+    room = newRoom(sha(secret));
     rooms.set(code, room);
   } else if (!same(room.ownerHash, sha(secret))) {
     return res.status(403).json({ error: 'forbidden' });
   }
+  // Register name + public key now, so the friend can encrypt even if we are offline.
+  if (cleanName(name)) room.names.owner = cleanName(name);
+  if (cleanPub(pub)) room.pubs.owner = cleanPub(pub);
   room.touched = Date.now();
   res.json({ ok: true, guest: !!room.guestHash });
 });
@@ -96,7 +113,7 @@ app.post('/api/host', (req, res) => {
 // Second person joins using the owner's code.
 app.post('/api/join', (req, res) => {
   if (limited(req, 20)) return res.status(429).json({ error: 'rate' });
-  const { code, secret } = req.body || {};
+  const { code, secret, name, pub } = req.body || {};
   if (!validCode(code) || !validSecret(secret)) return res.status(400).json({ error: 'bad_code' });
   const room = rooms.get(code);
   if (!room) return res.status(404).json({ error: 'not_found' });
@@ -104,6 +121,8 @@ app.post('/api/join', (req, res) => {
   if (same(room.ownerHash, h)) return res.status(400).json({ error: 'own_code' });
   if (!room.guestHash) room.guestHash = h;
   else if (!same(room.guestHash, h)) return res.status(409).json({ error: 'full' });
+  if (cleanName(name)) room.names.guest = cleanName(name);
+  if (cleanPub(pub)) room.pubs.guest = cleanPub(pub);
   room.touched = Date.now();
   presence(code);
   res.json({ ok: true });
@@ -138,6 +157,7 @@ app.post('/api/close', async (req, res) => {
   } else {
     room.guestHash = null;
     room.names.guest = '';
+    room.pubs.guest = '';
     room.messages = [];
     io.to(code).emit('cleared');
     for (const s of await io.in(code).fetchSockets()) if (s.data.role === 'guest') s.disconnect(true);
@@ -147,7 +167,7 @@ app.post('/api/close', async (req, res) => {
 });
 
 io.use((socket, next) => {
-  const { code, secret, name } = socket.handshake.auth || {};
+  const { code, secret, name, pub } = socket.handshake.auth || {};
   if (!validCode(code) || !validSecret(secret)) return next(new Error('bad_auth'));
   const room = rooms.get(code);
   if (!room) return next(new Error('no_room'));
@@ -156,6 +176,8 @@ io.use((socket, next) => {
   socket.data = { code, role };
   const n = cleanName(name);
   if (n) room.names[role] = n;
+  const p = cleanPub(pub);
+  if (p) room.pubs[role] = p;
   next();
 });
 
@@ -170,25 +192,21 @@ io.on('connection', (socket) => {
   socket.on('message', (m, ack) => {
     const r = rooms.get(code);
     if (!r || !m) return;
-    const type = ['text', 'image', 'audio', 'video', 'file'].includes(m.type) ? m.type : null;
-    if (!type) return ack?.({ ok: false });
+    if (!MSG_TYPES.includes(m.type)) return ack?.({ ok: false });
     const now = Date.now();
-    const msg = { id: crypto.randomUUID(), from: role, type, time: now, expiresAt: now + MSG_TTL };
-    if (type === 'text') {
-      msg.text = String(m.text || '').slice(0, 4000);
-      if (!msg.text.trim()) return ack?.({ ok: false });
+    const msg = { id: crypto.randomUUID(), from: role, type: m.type, time: now, expiresAt: now + MSG_TTL, reactions: {} };
+    if (m.type === 'text') {
+      const payload = toBuf(m.payload);
+      if (!payload || !payload.length || payload.length > MAX_TEXT) return ack?.({ ok: false, error: 'size' });
+      msg.payload = payload;
     } else {
-      const data = Buffer.isBuffer(m.data) ? m.data : m.data ? Buffer.from(m.data) : null;
-      if (!data || !data.length || data.length > MAX_FILE) return ack?.({ ok: false, error: 'size' });
-      const mime = String(m.mime || 'application/octet-stream').slice(0, 100);
-      if (type !== 'file' && !mime.startsWith(type + '/')) return ack?.({ ok: false, error: 'mime' });
-      Object.assign(msg, { data, mime, name: String(m.name || '').slice(0, 100), duration: Number(m.duration) || 0 });
+      const data = toBuf(m.data);
+      const meta = toBuf(m.meta);
+      if (!data || !data.length || data.length > MAX_FILE + 64) return ack?.({ ok: false, error: 'size' });
+      msg.data = data;
+      if (meta && meta.length <= MAX_META) msg.meta = meta;
     }
-    msg.reactions = {};
-    if (typeof m.replyTo === 'string') {
-      const ref = r.messages.find((x) => x.id === m.replyTo);
-      if (ref) msg.replyTo = { id: ref.id, from: ref.from, text: snippet(ref) };
-    }
+    if (typeof m.replyTo === 'string' && r.messages.some((x) => x.id === m.replyTo)) msg.replyTo = m.replyTo;
     r.messages.push(msg);
     r.touched = now;
     let bytes = r.messages.reduce((n, x) => n + (x.data?.length || 0), 0);
@@ -200,15 +218,6 @@ io.on('connection', (socket) => {
   });
 
   const findMsg = (id) => rooms.get(code)?.messages.find((x) => x.id === id);
-  // Keep quoted previews in replies in sync when the original is edited/deleted.
-  const refreshQuotes = (r, id, text) => {
-    for (const x of r.messages) {
-      if (x.replyTo?.id === id) {
-        x.replyTo.text = text;
-        io.to(code).emit('update', { id: x.id, replyTo: x.replyTo });
-      }
-    }
-  };
 
   // One reaction per person per message; same emoji again removes it.
   socket.on('react', (p) => {
@@ -219,17 +228,15 @@ io.on('connection', (socket) => {
     io.to(code).emit('update', { id: msg.id, reactions: msg.reactions });
   });
 
-  // Edit: only your own text messages.
+  // Edit: only your own text messages (the new ciphertext replaces the old one).
   socket.on('edit', (p) => {
-    const r = rooms.get(code);
     const msg = findMsg(p?.id);
-    if (!r || !msg || msg.from !== role || msg.type !== 'text') return;
-    const text = String(p.text || '').slice(0, 4000);
-    if (!text.trim()) return;
-    msg.text = text;
+    if (!msg || msg.from !== role || msg.type !== 'text') return;
+    const payload = toBuf(p.payload);
+    if (!payload || !payload.length || payload.length > MAX_TEXT) return;
+    msg.payload = payload;
     msg.edited = true;
-    io.to(code).emit('update', { id: msg.id, text, edited: true });
-    refreshQuotes(r, msg.id, snippet(msg));
+    io.to(code).emit('update', { id: msg.id, payload, edited: true });
   });
 
   // Delete for everyone: only your own messages.
@@ -239,7 +246,6 @@ io.on('connection', (socket) => {
     if (!r || !msg || msg.from !== role) return;
     r.messages = r.messages.filter((x) => x.id !== msg.id);
     io.to(code).emit('deleted', { id: msg.id });
-    refreshQuotes(r, msg.id, 'Message deleted');
   });
 
   // "Clear chat": wipes it for both people.

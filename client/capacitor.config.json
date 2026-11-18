@@ -1,6 +1,6 @@
 {
   "appId": "com.calcchat.app",
-  "appName": "Calculator",
+  "appName": "2048",
   "webDir": "dist",
   "android": {
     "allowMixedContent": false,

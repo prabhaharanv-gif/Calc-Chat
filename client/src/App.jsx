@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import Calculator from './Calculator.jsx';
+import Game2048 from './Game2048.jsx';
 import Setup from './Setup.jsx';
 import Home from './Home.jsx';
 import { post } from './api.js';
@@ -44,9 +45,10 @@ export default function App() {
   }, [wipeAll]);
 
   // Called by the calculator when a digits-only entry is submitted with "=".
-  const onCode = useCallback(async (digits) => {
+  const onCode = useCallback(async (digits, opts) => {
     const p = load();
-    if (digits.length !== p.passLen) return 'ignore';
+    // The calculator only treats a passcode-length entry as an attempt; the game's PIN pad always does.
+    if (digits.length !== p.passLen && !opts?.explicit) return 'ignore';
     if (sha256(`${p.salt}:${digits}`) === p.passHash) {
       save({ fails: 0 });
       setUnlocked(true);
@@ -62,7 +64,11 @@ export default function App() {
 
   let screen;
   if (!profile.passHash) screen = <Setup onDone={update} />;
-  else if (!unlocked) screen = <Calculator onCode={onCode} />;
+  else if (!unlocked) {
+    screen = profile.mode === 'game'
+      ? <Game2048 onCode={onCode} passLen={profile.passLen} />
+      : <Calculator onCode={onCode} />;
+  }
   else screen = <Home profile={profile} update={update} onLock={() => setUnlocked(false)} theme={theme} onTheme={toggleTheme} />;
 
   return (
