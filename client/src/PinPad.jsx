@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Icon from './Icon.jsx';
 
 const PAD = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', '✓'];
 const LONG_PRESS_MS = 2500;
@@ -66,7 +67,10 @@ export default function PinPad({ passLen, onCode, onClose }) {
         </div>
         <div className="pingrid">
           {PAD.map((k) => (
-            <button key={k} onClick={() => (k === '⌫' ? back() : k === '✓' ? ok() : add(k))}>{k}</button>
+            <button key={k} onClick={() => (k === '⌫' ? back() : k === '✓' ? ok() : add(k))}
+              aria-label={k === '⌫' ? 'Delete' : k === '✓' ? 'Enter' : k}>
+              {k === '⌫' ? <Icon name="backspace" size={24} /> : k === '✓' ? <Icon name="check" size={26} /> : k}
+            </button>
           ))}
         </div>
       </div>

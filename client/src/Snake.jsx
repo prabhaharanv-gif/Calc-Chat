@@ -110,6 +110,7 @@ export default function Snake({ onCode, passLen }) {
 
         <div className="sboard" onPointerDown={swDown} onPointerUp={swUp}>
           <canvas ref={canvas} width={COLS * CELL} height={ROWS * CELL} />
+          {pinOpen && <PinPad passLen={passLen} onCode={onCode} onClose={() => setPinOpen(false)} />}
           {!running && !g.over && <div className="sover"><b>Tap or press an arrow key to start</b></div>}
           {g.over && (
             <div className="sover">
@@ -128,8 +129,6 @@ export default function Snake({ onCode, passLen }) {
         </div>
         <p className="ghow"><b>How to play:</b> swipe or use the arrow keys to steer the snake. Eat the red apples to grow, and do not hit the walls or yourself!</p>
       </div>
-
-      {pinOpen && <PinPad passLen={passLen} onCode={onCode} onClose={() => setPinOpen(false)} />}
     </div>
   );
 }

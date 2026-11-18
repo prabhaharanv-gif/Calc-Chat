@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Chat from './Chat.jsx';
 import Icon from './Icon.jsx';
 import { post } from './api.js';
 import { randomCode, randomSecret } from './storage.js';
 import { getIdentity } from './identity.js';
 import { MODES } from './Setup.jsx';
+import { ensurePermission } from './notify.js';
 
 const JOIN_ERRORS = {
   not_found: 'Code not found. Ask your friend to open the app once, then try again.',
@@ -14,28 +15,77 @@ const JOIN_ERRORS = {
   bad_code: 'Code looks wrong (8 letters/numbers).',
 };
 
+const TABS = [
+  { id: 'chat', label: 'Chat', icon: 'message' },
+  { id: 'join', label: 'Join', icon: 'user' },
+  { id: 'settings', label: 'Settings', icon: 'sliders' },
+];
+
+const PRIVACY = [
+  ['lock', 'End-to-end encrypted'],
+  ['clock', 'Messages vanish after 4 hours'],
+  ['shield', 'Nothing is ever saved'],
+  ['eyeoff', 'No account, no phone number'],
+];
+
 // 8-character code shown as two groups of four tiles.
 function Tiles({ code, small }) {
   return (
-    <div className={`tiles ${small ? 'small' : ''}`}>
+    <div className={`hm-tiles ${small ? 'small' : ''}`}>
       {[0, 4].map((s) => (
-        <div className="tilegroup" key={s}>
-          {code.slice(s, s + 4).split('').map((c, i) => <span key={i} className="tile">{c}</span>)}
+        <div className="hm-tg" key={s}>
+          {code.slice(s, s + 4).split('').map((c, i) => <span key={i} className="hm-tile">{c}</span>)}
         </div>
       ))}
     </div>
   );
 }
 
-export default function Home({ profile, update, onLock, theme, onTheme }) {
+export default function Home({ profile, update, onLock, theme, onTheme, activeRoom, jump }) {
   const [view, setView] = useState(null); // null | 'owner' | 'guest'
+  const [tab, setTab] = useState(profile.name ? 'chat' : 'settings');
   const [joinInput, setJoinInput] = useState('');
-  const [msg, setMsg] = useState('');
+  const [toast, setToast] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const frontMode = MODES.some((m) => m.id === profile.mode) ? profile.mode : 'calc';
   const [editing, setEditing] = useState(!profile.name); // ask for a name if none is set yet
   const [nameDraft, setNameDraft] = useState(profile.name || '');
+  const timer = useRef(null);
+  const frontMode = MODES.some((m) => m.id === profile.mode) ? profile.mode : 'calc';
+
+  const flash = useCallback((text, err = false) => {
+    clearTimeout(timer.current);
+    setToast({ text, err });
+    timer.current = setTimeout(() => setToast(null), 2400);
+  }, []);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  // Tell the app which chat is open (so it does not notify about it), and open one when a banner is tapped.
+  useEffect(() => {
+    if (activeRoom) activeRoom.current = view;
+    return () => { if (activeRoom) activeRoom.current = null; };
+  }, [view, activeRoom]);
+  useEffect(() => {
+    if (jump && (jump.role === 'owner' || profile.joined)) { setTab('chat'); setView(jump.role); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jump?.id]);
+
+  const toggleNotify = async () => {
+    if (profile.notify === true) { update({ notify: false }); return; }
+    update({ notify: true });
+    const ok = await ensurePermission();
+    if (ok) flash('Message alerts are on');
+    else flash('In-app alerts are on. Allow notifications in your phone/browser settings for alerts when the app is closed.', true);
+  };
+
+  const host = useCallback(async () => {
+    try {
+      const id = await getIdentity();
+      const r = await post('/api/host', { code: profile.ownCode, secret: profile.ownSecret, name: profile.name, pub: id?.pubJson });
+      if (!r.ok) flash('Server problem. Try again.', true);
+    } catch { flash('Cannot reach server.', true); }
+  }, [profile.ownCode, profile.ownSecret, profile.name, flash]);
+
+  useEffect(() => { host(); }, [host]);
 
   const saveName = (e) => {
     e.preventDefault();
@@ -43,24 +93,11 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
     if (!n) return;
     update({ name: n });
     setEditing(false);
+    if (!profile.name) setTab('chat');
   };
 
-  const host = useCallback(async () => {
-    try {
-      const id = await getIdentity();
-      const r = await post('/api/host', { code: profile.ownCode, secret: profile.ownSecret, name: profile.name, pub: id?.pubJson });
-      setMsg(r.ok ? '' : 'Server problem. Try again.');
-    } catch { setMsg('Cannot reach server.'); }
-  }, [profile.ownCode, profile.ownSecret, profile.name]);
-
-  useEffect(() => { host(); }, [host]);
-
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(profile.ownCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch { /* clipboard blocked */ }
+    try { await navigator.clipboard.writeText(profile.ownCode); flash('Code copied'); } catch { flash('Copy blocked by the browser', true); }
   };
   const share = () => navigator.share?.({ text: `Join my private chat. Code: ${profile.ownCode}` }).catch(() => {});
 
@@ -68,12 +105,13 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
     if (!confirm('Create a new code? The old code and its chat will be deleted.')) return;
     try { await post('/api/close', { code: profile.ownCode, secret: profile.ownSecret }); } catch { /* offline */ }
     update({ ownCode: randomCode(), ownSecret: randomSecret() });
+    flash('New code created');
   };
 
   const join = async (e) => {
     e.preventDefault();
     const code = joinInput.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (code.length !== 8) return setMsg(JOIN_ERRORS.bad_code);
+    if (code.length !== 8) return flash(JOIN_ERRORS.bad_code, true);
     setBusy(true);
     try {
       const secret = randomSecret();
@@ -82,10 +120,9 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
       if (r.ok) {
         update({ joined: { code, secret } });
         setJoinInput('');
-        setMsg('');
         setView('guest');
-      } else setMsg(JOIN_ERRORS[r.error] || 'Could not join.');
-    } catch { setMsg('Cannot reach server.'); }
+      } else flash(JOIN_ERRORS[r.error] || 'Could not join.', true);
+    } catch { flash('Cannot reach server.', true); }
     setBusy(false);
   };
 
@@ -105,99 +142,147 @@ export default function Home({ profile, update, onLock, theme, onTheme }) {
   }
 
   return (
-    <div className="page homepage">
-      <header className="homebar">
-        <div className="brand">
-          <span className="logo"><Icon name="shield" size={17} /></span>
-          <span>Private Chat</span>
+    <div className="page hm">
+      <div className="hm-blob b1" />
+      <div className="hm-blob b2" />
+
+      <header className="hm-head">
+        <div>
+          <div className="hm-hello">{profile.name ? 'Hello,' : 'Welcome'}</div>
+          <div className="hm-name">{profile.name || 'Set up your profile'}</div>
         </div>
         <div className="row">
-          <button className="iconbtn" onClick={onTheme} aria-label="Switch theme">
+          <button className="iconbtn glass" onClick={onTheme} aria-label="Switch theme">
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
           </button>
-          <button className="iconbtn" onClick={onLock} aria-label="Lock"><Icon name="lock" /></button>
+          <button className="iconbtn glass" onClick={onLock} aria-label="Lock"><Icon name="lock" /></button>
         </div>
       </header>
 
-      <div className="home">
-        <section className="profilecard">
-          <div className="grow">
-            <div className="muted small">Your name</div>
-            {editing ? (
-              <form className="namerow" onSubmit={saveName}>
-                <input autoFocus value={nameDraft} maxLength={24} placeholder="Enter your name"
-                  onChange={(e) => setNameDraft(e.target.value)} />
-                <button className="primary">Save</button>
-              </form>
-            ) : (
-              <div className="myname">{profile.name}</div>
-            )}
-          </div>
-          {!editing && (
-            <button className="iconbtn" aria-label="Edit name"
-              onClick={() => { setNameDraft(profile.name || ''); setEditing(true); }}>
-              <Icon name="edit" size={18} />
-            </button>
-          )}
-        </section>
-
-        <section className="hero">
-          <div className="eyebrow">Your private code</div>
-          <Tiles code={profile.ownCode} />
-          <div className="pills">
-            <button className="pill" onClick={copy}>
-              <Icon name={copied ? 'check' : 'copy'} size={15} />{copied ? 'Copied' : 'Copy'}
-            </button>
-            {navigator.share && (
-              <button className="pill" onClick={share}><Icon name="share" size={15} />Share</button>
-            )}
-            <button className="pill" onClick={newCode}><Icon name="refresh" size={15} />New code</button>
-          </div>
-          <button className="cta" onClick={() => setView('owner')}>
-            <Icon name="message" size={18} />Open my chat
-          </button>
-          <p className="hint">Give this code to one person. They can join your chat.</p>
-        </section>
-
-        <section className="panel">
-          <div className="paneltitle"><Icon name="user" size={18} /><h3>Join a friend</h3></div>
-          {profile.joined ? (
+      <main className="hm-main">
+        <div className="hm-stack" key={tab}>
+          {tab === 'chat' && (
             <>
-              <Tiles code={profile.joined.code} small />
-              <div className="row">
-                <button className="primary grow" onClick={() => setView('guest')}>Open chat</button>
-                <button className="danger" onClick={leave}>Leave</button>
-              </div>
+              <section className="hm-key">
+                <span className="hm-chip"><Icon name="lock" size={12} />End-to-end encrypted</span>
+                <div className="hm-label">YOUR PRIVATE CODE</div>
+                <button className="hm-code" onClick={copy} aria-label="Copy your code"><Tiles code={profile.ownCode} /></button>
+                <div className="hm-tap">Tap the code to copy</div>
+                <div className="hm-actions">
+                  {navigator.share && <button className="hm-pill" onClick={share}><Icon name="share" size={15} />Share</button>}
+                  <button className="hm-pill" onClick={copy}><Icon name="copy" size={15} />Copy</button>
+                  <button className="hm-pill" onClick={newCode}><Icon name="refresh" size={15} />New code</button>
+                </div>
+              </section>
+
+              <button className="hm-cta" onClick={() => setView('owner')}>
+                <Icon name="message" size={20} />Open my chat
+              </button>
+
+              {profile.joined && (
+                <button className="hm-friend" onClick={() => setView('guest')}>
+                  <span className="hm-fi"><Icon name="user" size={18} /></span>
+                  <span className="grow">
+                    <b>Friend&apos;s chat</b>
+                    <small>{profile.joined.code}</small>
+                  </span>
+                  <Icon name="arrow" size={18} />
+                </button>
+              )}
             </>
-          ) : (
-            <form onSubmit={join} className="joinrow">
-              <input placeholder="ENTER CODE" value={joinInput} maxLength={12} autoCapitalize="characters"
-                autoComplete="off" spellCheck="false" onChange={(e) => setJoinInput(e.target.value)} />
-              <button className="primary" disabled={busy}>{busy ? '...' : 'Join'}</button>
-            </form>
           )}
-        </section>
 
-        {msg && <div className="err center-text">{msg}</div>}
+          {tab === 'join' && (
+            <section className="hm-card">
+              <div className="hm-bigicon"><Icon name="user" size={28} /></div>
+              <h2>Join a friend</h2>
+              {profile.joined ? (
+                <>
+                  <p>You are connected with</p>
+                  <Tiles code={profile.joined.code} small />
+                  <button className="hm-cta" onClick={() => setView('guest')}><Icon name="message" size={20} />Open chat</button>
+                  <button className="hm-link bad" onClick={leave}>Leave this chat</button>
+                </>
+              ) : (
+                <>
+                  <p>Enter the 8-letter code your friend shared with you.</p>
+                  <form onSubmit={join} className="hm-joinform">
+                    <input placeholder="ENTER CODE" value={joinInput} maxLength={12} autoCapitalize="characters"
+                      autoComplete="off" spellCheck="false" onChange={(e) => setJoinInput(e.target.value)} />
+                    <button className="hm-cta" disabled={busy}>{busy ? 'Joining...' : 'Join chat'}</button>
+                  </form>
+                </>
+              )}
+            </section>
+          )}
 
-        <section className="panel">
-          <div className="paneltitle"><Icon name="eyeoff" size={18} /><h3>Front screen</h3></div>
-          <div className="seg">
-            {MODES.map((m) => (
-              <button key={m.id} className={frontMode === m.id ? 'on' : ''} onClick={() => update({ mode: m.id })}>{m.label}</button>
-            ))}
-          </div>
-          <p className="muted small" style={{ margin: 0 }}>
-            Lock, then: {MODES.find((m) => m.id === frontMode).how}
-          </p>
-        </section>
+          {tab === 'settings' && (
+            <>
+              <section className="hm-group">
+                <h4>Profile</h4>
+                <div className="hm-row">
+                  <span className="hm-k">Name</span>
+                  {editing ? (
+                    <form className="hm-nameform" onSubmit={saveName}>
+                      <input autoFocus value={nameDraft} maxLength={24} placeholder="Your name"
+                        onChange={(e) => setNameDraft(e.target.value)} />
+                      <button className="hm-save">Save</button>
+                    </form>
+                  ) : (
+                    <>
+                      <span className="hm-v grow">{profile.name}</span>
+                      <button className="hm-edit" aria-label="Edit name"
+                        onClick={() => { setNameDraft(profile.name || ''); setEditing(true); }}><Icon name="edit" size={16} /></button>
+                    </>
+                  )}
+                </div>
+              </section>
 
-        <ul className="perks">
-          <li><Icon name="eyeoff" size={20} /><span>No account</span></li>
-          <li><Icon name="clock" size={20} /><span>Gone in 4 hours</span></li>
-          <li><Icon name="shield" size={20} /><span>Nothing saved</span></li>
-        </ul>
-      </div>
+              <section className="hm-group">
+                <h4>Front screen</h4>
+                <div className="hm-row col">
+                  <div className="seg">
+                    {MODES.map((m) => (
+                      <button key={m.id} className={frontMode === m.id ? 'on' : ''} onClick={() => update({ mode: m.id })}>{m.label}</button>
+                    ))}
+                  </div>
+                  <div className="hm-cap">{MODES.find((m) => m.id === frontMode).how}</div>
+                </div>
+              </section>
+
+              <section className="hm-group">
+                <h4>Alerts</h4>
+                <div className="hm-row">
+                  <span className="hm-pi"><Icon name="message" size={16} /></span>
+                  <span className="hm-v grow">New message alerts</span>
+                  <button className={`hm-switch ${profile.notify === true ? 'on' : ''}`} onClick={toggleNotify}
+                    role="switch" aria-checked={profile.notify === true} aria-label="New message alerts" />
+                </div>
+              </section>
+
+              <section className="hm-group">
+                <h4>Privacy</h4>
+                {PRIVACY.map(([icon, text]) => (
+                  <div className="hm-row" key={text}>
+                    <span className="hm-pi"><Icon name={icon} size={16} /></span>
+                    <span className="hm-v">{text}</span>
+                  </div>
+                ))}
+              </section>
+            </>
+          )}
+        </div>
+      </main>
+
+      {toast && <div className={`hm-toast ${toast.err ? 'err' : ''}`}>{toast.text}</div>}
+
+      <nav className="hm-dock" aria-label="Sections">
+        {TABS.map((t) => (
+          <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>
+            <Icon name={t.icon} size={20} />{t.label}
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

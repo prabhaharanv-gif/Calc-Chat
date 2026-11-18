@@ -75,6 +75,24 @@ try {
   assert.equal((await emit(a, { type: 'video', data: Buffer.alloc(26 * 1024 * 1024) }).catch(() => ({ ok: false }))).ok, false, 'oversize media rejected');
   console.log('ok  text / image / voice / video relay, validation');
 
+  // Inbox sockets get a content-free ping, and are not counted as being in the chat.
+  const inbox = await new Promise((res, rej) => {
+    const s = io(base, { auth: { code: CODE, secret: OWN, inbox: true }, transports: ['websocket'] });
+    s.pings = []; s.events = [];
+    s.on('ping', (p) => s.pings.push(p));
+    s.onAny((ev) => s.events.push(ev));
+    s.on('connect', () => res(s)); s.on('connect_error', rej);
+  });
+  await emit(b, txt('ping-test'));
+  await wait(250);
+  assert.deepEqual(inbox.pings.at(-1), { from: 'guest', name: 'bBob/b' }, 'inbox gets who sent it, nothing else');
+  assert.ok(!inbox.events.includes('message') && !inbox.events.includes('history') && !inbox.events.includes('presence'), 'inbox never receives chat content or presence');
+  inbox.disconnect();
+  await wait(200);
+  assert.equal(a.presence.owner, true, 'owner still shown online via the real chat socket');
+  const msgCountBefore = a.msgs.length;
+  console.log('ok  inbox ping (no content, no presence)');
+
   // reactions / reply / edit / delete
   const m0 = a.msgs[0];
   b.emit('react', { id: m0.id, emoji: '❤️' });

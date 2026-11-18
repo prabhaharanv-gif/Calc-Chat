@@ -67,6 +67,7 @@ export default function Game2048({ onCode, passLen }) {
               {v ? <div key={v} className={`gtile t${v > 2048 ? 'big' : v}`}>{v}</div> : null}
             </div>
           ))}
+          {pinOpen && <PinPad passLen={passLen} onCode={onCode} onClose={() => setPinOpen(false)} />}
           {(game.over || showWin) && (
             <div className="gover">
               <h2>{game.over ? 'Game over!' : 'You win!'}</h2>
@@ -80,8 +81,6 @@ export default function Game2048({ onCode, passLen }) {
 
         <p className="ghow"><b>How to play:</b> swipe (or use the arrow keys) to move the tiles. When two tiles with the same number touch, they merge into one!</p>
       </div>
-
-      {pinOpen && <PinPad passLen={passLen} onCode={onCode} onClose={() => setPinOpen(false)} />}
     </div>
   );
 }

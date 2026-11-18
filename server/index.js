@@ -153,6 +153,7 @@ app.post('/api/close', async (req, res) => {
   if (role === 'owner') {
     io.to(code).emit('closed');
     io.in(code).disconnectSockets(true);
+    io.in(`${code}:inbox`).disconnectSockets(true);
     rooms.delete(code);
   } else {
     room.guestHash = null;
@@ -161,19 +162,21 @@ app.post('/api/close', async (req, res) => {
     room.messages = [];
     io.to(code).emit('cleared');
     for (const s of await io.in(code).fetchSockets()) if (s.data.role === 'guest') s.disconnect(true);
+    for (const s of await io.in(`${code}:inbox`).fetchSockets()) if (s.data.role === 'guest') s.disconnect(true);
     presence(code);
   }
   res.json({ ok: true });
 });
 
 io.use((socket, next) => {
-  const { code, secret, name, pub } = socket.handshake.auth || {};
+  const { code, secret, name, pub, inbox } = socket.handshake.auth || {};
   if (!validCode(code) || !validSecret(secret)) return next(new Error('bad_auth'));
   const room = rooms.get(code);
   if (!room) return next(new Error('no_room'));
   const role = roleOf(room, secret);
   if (!role) return next(new Error('forbidden'));
-  socket.data = { code, role };
+  // "inbox" sockets only listen for a tiny "new message" ping (no content, not counted as being in the chat).
+  socket.data = { code, role, inbox: inbox === true };
   const n = cleanName(name);
   if (n) room.names[role] = n;
   const p = cleanPub(pub);
@@ -184,8 +187,12 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
   const { code, role } = socket.data;
   const room = rooms.get(code);
-  socket.join(code);
   room.touched = Date.now();
+  if (socket.data.inbox) {
+    socket.join(`${code}:inbox`);
+    return;
+  }
+  socket.join(code);
   socket.emit('history', room.messages.filter((m) => m.expiresAt > Date.now()));
   presence(code);
 
@@ -214,6 +221,8 @@ io.on('connection', (socket) => {
       bytes -= r.messages.shift().data?.length || 0;
     }
     io.to(code).emit('message', msg);
+    // Tiny notification ping for devices that are not inside the chat (no message content).
+    io.to(`${code}:inbox`).emit('ping', { from: role, name: r.names[role] });
     ack?.({ ok: true });
   });
 
