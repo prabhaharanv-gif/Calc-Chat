@@ -125,6 +125,15 @@ export default function Chat({ role, code, secret, title, onBack, onLock }) {
     } catch { alert('Microphone permission denied.'); }
   };
 
+  const [copied, setCopied] = useState(false);
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* clipboard blocked */ }
+  };
+
   const clearChat = () => {
     if (confirm('Clear this chat for both people?')) sock.current?.emit('clear');
   };
@@ -140,6 +149,9 @@ export default function Chat({ role, code, secret, title, onBack, onLock }) {
           <div>{title}</div>
           <div className="muted small">{sub}</div>
         </div>
+        <button className="ghost codechip" onClick={copyCode} title="Tap to copy code">
+          {copied ? 'Copied ✓' : code}
+        </button>
         <button className="ghost" onClick={clearChat} title="Clear chat for both">🗑</button>
         <button className="ghost" onClick={onLock}>🔒</button>
       </header>
