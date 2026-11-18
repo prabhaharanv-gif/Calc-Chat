@@ -145,13 +145,10 @@ export default function Chat({ role, code, secret, title, onBack, onLock, theme,
     <div className="page chat">
       <header className="bar">
         <button className="ghost" onClick={onBack}>←</button>
-        <div className="grow">
-          <div>{title}</div>
-          <div className="muted small">{sub}</div>
+        <div className="grow" onClick={copyCode} title="Tap to copy code" style={{ cursor: 'pointer' }}>
+          <div className="codetitle">{code}</div>
+          <div className="muted small">{copied ? 'Code copied ✓' : sub}</div>
         </div>
-        <button className="ghost codechip" onClick={copyCode} title="Tap to copy code">
-          {copied ? 'Copied ✓' : code}
-        </button>
         <button className="ghost" onClick={onTheme} title="Light / dark">{theme === 'dark' ? '☀️' : '🌙'}</button>
         <button className="ghost" onClick={clearChat} title="Clear chat for both">🗑</button>
         <button className="ghost" onClick={onLock}>🔒</button>

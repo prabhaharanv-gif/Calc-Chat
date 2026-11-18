@@ -34,7 +34,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); font-weight: 600; justify-content: space-between; }
 .grow { flex: 1; min-width: 0; }
 .muted { color: var(--muted); }
-.codechip { font-family: ui-monospace, Consolas, monospace; letter-spacing: .12em; font-size: .85rem; -webkit-user-select: text; user-select: text; }
+.codetitle { font-family: ui-monospace, Consolas, monospace; letter-spacing: .15em; font-size: 1.05rem; -webkit-user-select: text; user-select: text; }
+.bar .ghost { padding: 8px 10px; flex: none; }
+.bar .grow > div:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .small { font-size: .78rem; }
 .center-text { text-align: center; }
 .err { color: #ff453a; font-size: .9rem; }
