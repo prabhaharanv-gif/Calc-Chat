@@ -23,15 +23,17 @@ export default function PinPad({ passLen, onCode, onClose }) {
   const [pin, setPin] = useState('');
   const [shake, setShake] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [granted, setGranted] = useState(false); // correct PIN: play the unlock animation while the screen fades into the chat
 
   const submit = useCallback(async (code) => {
     if (busy) return;
     setBusy(true);
     const r = await onCode(code, { explicit: true });
-    if (r !== 'unlock') {
-      setShake(true);
-      setTimeout(() => { setShake(false); setPin(''); setBusy(false); }, 450);
-    }
+    if (r === 'unlock') { setGranted(true); return; }
+    // Wrong PIN: red dots + a gentle shake + a short buzz, no text hint.
+    setShake(true);
+    try { navigator.vibrate?.([25, 35, 25]); } catch { /* not supported */ }
+    setTimeout(() => { setShake(false); setPin(''); setBusy(false); }, 480);
   }, [busy, onCode]);
 
   const add = useCallback((d) => {
@@ -59,8 +61,8 @@ export default function PinPad({ passLen, onCode, onClose }) {
 
   return (
     <div className="pinwrap" onClick={() => !busy && onClose()}>
-      <div className={`pinpad ${shake ? 'shake' : ''}`} onClick={(e) => e.stopPropagation()}>
-        <div className="pindots">
+      <div className={`pinpad ${shake ? 'shake' : ''} ${granted ? 'ok' : ''}`} onClick={(e) => e.stopPropagation()}>
+        <div className={`pindots ${shake ? 'err' : ''} ${granted ? 'ok' : ''}`}>
           {Array.from({ length: Math.max(passLen || 4, pin.length) }).map((_, i) => (
             <span key={i} className={i < pin.length ? 'on' : ''} />
           ))}

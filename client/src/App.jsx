@@ -17,6 +17,7 @@ export default function App() {
   const [notice, setNotice] = useState(null); // in-app banner (only inside the unlocked area)
   const [jump, setJump] = useState(null); // asks Home to open a chat (from the banner)
   const [pings, setPings] = useState({ owner: 0, guest: 0 }); // time of the newest message from the friend, per chat
+  const [leaving, setLeaving] = useState(false); // the game screen fades out while the chat opens
   const hidden = useScreenGuard();
   const unlockedRef = useRef(false);
   const activeRoom = useRef(null); // which chat is open right now ('owner' | 'guest' | null)
@@ -94,7 +95,9 @@ export default function App() {
     if (digits.length !== p.passLen && !opts?.explicit) return 'ignore';
     if (sha256(`${p.salt}:${digits}`) === p.passHash) {
       save({ fails: 0 });
-      setUnlocked(true);
+      // Smooth hand-over: the PIN pad plays its unlock animation, the game fades out, then the chat area fades in.
+      setLeaving(true);
+      setTimeout(() => { setUnlocked(true); setLeaving(false); }, 450);
       return 'unlock';
     }
     const fails = (p.fails || 0) + 1;
@@ -108,11 +111,17 @@ export default function App() {
   let screen;
   if (!profile.passHash) screen = <Setup onDone={update} />;
   else if (!unlocked) {
-    screen = <Games onCode={onCode} passLen={profile.passLen} signal={signal} />;
+    screen = (
+      <div className={`front ${leaving ? 'leaving' : ''}`}>
+        <Games onCode={onCode} passLen={profile.passLen} signal={signal} />
+      </div>
+    );
   } else {
     screen = (
-      <Home profile={profile} update={update} onLock={() => setUnlocked(false)} theme={theme} onTheme={toggleTheme}
-        activeRoom={activeRoom} jump={jump} onSeen={markSeen} />
+      <div className="homein">
+        <Home profile={profile} update={update} onLock={() => setUnlocked(false)} theme={theme} onTheme={toggleTheme}
+          activeRoom={activeRoom} jump={jump} onSeen={markSeen} />
+      </div>
     );
   }
 

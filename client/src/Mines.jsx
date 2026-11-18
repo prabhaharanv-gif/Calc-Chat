@@ -39,7 +39,7 @@ export default function Mines({ onCode, passLen, signal, onBack }) {
 
   return (
     <div className="gamewrap themed">
-      <div className="game">
+      <div className={`game ${pinOpen ? 'paused' : ''}`}>
         <GameHeader title="Mines" signal={signal} onBack={onBack} onPin={() => setPinOpen(true)}
           right={<Scores items={[['MINES', MINES - flagsUsed(g)], ['TIME', time]]} />} />
         <div className="gbar">

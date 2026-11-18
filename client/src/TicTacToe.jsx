@@ -67,7 +67,7 @@ export default function TicTacToe({ onCode, passLen, signal, onBack }) {
 
   return (
     <div className="gamewrap themed">
-      <div className="game">
+      <div className={`game ${pinOpen ? 'paused' : ''}`}>
         <GameHeader title="Tic Tac Toe" signal={signal} onBack={onBack} onPin={() => setPinOpen(true)}
           right={<Scores items={[['W / L / D', `${score.w} / ${score.l} / ${score.d}`]]} />} />
         <div className="gbar">

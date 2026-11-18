@@ -59,7 +59,7 @@ export default function Game2048({ onCode, passLen, signal, onBack }) {
 
   return (
     <div className="gamewrap themed">
-      <div className="game">
+      <div className={`game ${pinOpen ? 'paused' : ''}`}>
         <GameHeader title="2048" signal={signal} onBack={onBack} onPin={() => setPinOpen(true)}
           right={<Scores items={[['SCORE', game.score], ['BEST', best]]} />} />
         <div className="gbar">

@@ -570,6 +570,22 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .govplay, .govkeep, .govhome { padding: 8px 6px; }
 }
 
+/* ===== PIN pad: pause, error and unlock feedback ===== */
+.game.paused .gbar, .game.paused .dpad, .game.paused .ghow { pointer-events: none; opacity: .5; transition: opacity .2s; }
+.pindots span { transition: background .15s, border-color .15s, transform .15s, box-shadow .2s; }
+.pindots.err span { background: #ff6b6b; border-color: #ff6b6b; }
+.pindots.ok span { background: #fff; border-color: #fff; transform: scale(1.25); box-shadow: 0 0 12px rgba(255,255,255,.8); }
+.pinpad.shake { animation: shake .48s ease; }
+@keyframes shake { 15%, 55% { transform: translateX(-7px); } 35%, 75% { transform: translateX(7px); } }
+.pinpad.ok { animation: padok .45s ease forwards; }
+@keyframes padok { 55% { transform: scale(1.05); } to { transform: scale(.88); opacity: 0; } }
+/* the game screen fades/zooms away, the chat area fades in */
+.front { height: 100%; transition: opacity .42s ease, transform .42s ease, filter .42s ease; }
+.front.leaving { opacity: 0; transform: scale(1.05); filter: blur(7px); }
+.homein { height: 100%; animation: homein .5s cubic-bezier(.2,.8,.25,1) both; }
+@keyframes homein { from { opacity: 0; transform: scale(.97) translateY(14px); } }
+@media (prefers-reduced-motion: reduce) { .front, .homein { transition: none; animation: none; } .front.leaving { filter: none; transform: none; } }
+
 /* Hold-the-title gesture: same generous touch area on every game title and on the hub title */
 .gtitle { padding: 6px 10px; margin: -6px -10px; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
 .icon.off, .icon:disabled { opacity: .45; cursor: not-allowed; }

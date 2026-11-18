@@ -89,11 +89,11 @@ export default function Snake({ onCode, passLen, signal, onBack }) {
   const speed = Math.max(70, 140 - Math.floor(g.score / 50) * 10);
 
   const turn = useCallback((d) => {
-    if (g.over) return;
+    if (g.over || pinOpen) return; // fully paused while the PIN pad is open
     const q = inputs.current;
     if (q.length < 3 && q[q.length - 1] !== d) q.push(d);
     setRunning(true);
-  }, [g.over]);
+  }, [g.over, pinOpen]);
 
   const restart = () => { inputs.current = []; startBest.current = best; setG(newState()); setRunning(false); };
 
@@ -135,7 +135,7 @@ export default function Snake({ onCode, passLen, signal, onBack }) {
 
   return (
     <div className="gamewrap themed">
-      <div className="game">
+      <div className={`game ${pinOpen ? 'paused' : ''}`}>
         <GameHeader title="Snake" signal={signal} onBack={onBack} onPin={() => setPinOpen(true)}
           right={<Scores items={[['SCORE', g.score], ['BEST', best]]} />} />
         <div className="gbar">

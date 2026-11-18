@@ -30,7 +30,7 @@ export default function Slide({ onCode, passLen, signal, onBack }) {
 
   return (
     <div className="gamewrap themed">
-      <div className="game">
+      <div className={`game ${pinOpen ? 'paused' : ''}`}>
         <GameHeader title="Slide" signal={signal} onBack={onBack} onPin={() => setPinOpen(true)}
           right={<Scores items={[['MOVES', p.moves], ['BEST', best || '-']]} />} />
         <div className="gbar">

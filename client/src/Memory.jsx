@@ -17,10 +17,10 @@ export default function Memory({ onCode, passLen, signal, onBack }) {
 
   // A wrong pair stays visible for a moment, then flips back.
   useEffect(() => {
-    if (!g.pending) return undefined;
+    if (!g.pending || pinOpen) return undefined; // paused while the PIN pad is open
     const t = setTimeout(() => setG(resolve), 750);
     return () => clearTimeout(t);
-  }, [g.pending]);
+  }, [g.pending, pinOpen]);
 
   useEffect(() => {
     if (g.won && (!best || g.moves < best)) {
@@ -37,7 +37,7 @@ export default function Memory({ onCode, passLen, signal, onBack }) {
 
   return (
     <div className="gamewrap themed">
-      <div className="game">
+      <div className={`game ${pinOpen ? 'paused' : ''}`}>
         <GameHeader title="Memory" signal={signal} onBack={onBack} onPin={() => setPinOpen(true)}
           right={<Scores items={[['MOVES', g.moves], ['BEST', best || '-']]} />} />
         <div className="gbar">
