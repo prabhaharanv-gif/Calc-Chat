@@ -68,11 +68,11 @@ function Icon2({ id }) {
 
 const GAMES = [
   { id: 'snake', name: 'Snake', C: Snake, a: '#43b36a', b: '#1c6b3e' },
-  { id: '2048', name: '2048', C: Game2048, a: '#f6b94b', b: '#e0762f' },
+  { id: 'slide', name: 'Slide', C: Slide, a: '#ff8a5c', b: '#d23a63' },
   { id: 'memory', name: 'Memory', C: Memory, a: '#a56bff', b: '#d1479b' },
   { id: 'ttt', name: 'Tic Tac Toe', C: TicTacToe, a: '#4c8dff', b: '#2748c9' },
   { id: 'mines', name: 'Mines', C: Mines, a: '#6b7a92', b: '#252f3f' },
-  { id: 'slide', name: 'Slide', C: Slide, a: '#ff8a5c', b: '#d23a63' },
+  { id: '2048', name: '2048', C: Game2048, a: '#f6b94b', b: '#e0762f' },
 ];
 
 export default function Games({ onCode, passLen, signal }) {
