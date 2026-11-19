@@ -2,3 +2,4 @@ node_modules
 dist
 *.apk
 *.zip
+deploy/huggingface/space/

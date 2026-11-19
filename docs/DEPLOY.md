@@ -1,5 +1,7 @@
 # Hosting the Gamaroon server for free (Oracle Cloud Always Free)
 
+> No card? See `DEPLOY_HUGGINGFACE.md` (free, no card, good for the closed test).
+
 The server is a small Node.js app (Express + Socket.IO). It keeps everything in RAM and writes nothing to disk, so a
 tiny free VM is enough. The Android app only needs one thing from you: a permanent **https** address.
 
