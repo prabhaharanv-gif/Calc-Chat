@@ -10,6 +10,8 @@ WorkingDirectory=/opt/gamaroon/server
 Environment=NODE_ENV=production
 Environment=PORT=4000
 Environment=HOST=127.0.0.1
+# optional settings such as PRIVACY_EMAIL=you@example.com (written by setup.sh)
+EnvironmentFile=-/etc/gamaroon.env
 ExecStart=/usr/bin/node index.js
 Restart=always
 RestartSec=2

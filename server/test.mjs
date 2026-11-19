@@ -5,7 +5,7 @@ import assert from 'assert';
 
 const PORT = 4100;
 const base = `http://localhost:${PORT}`;
-const srv = spawn('node', ['index.js'], { env: { ...process.env, PORT, MSG_TTL_MS: '2500', SWEEP_MS: '300' }, stdio: 'inherit' });
+const srv = spawn('node', ['index.js'], { env: { ...process.env, PORT, MSG_TTL_MS: '2500', SWEEP_MS: '300', PRIVACY_EMAIL: 'privacy@test.invalid' }, stdio: 'inherit' });
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const post = async (p, b) => { const r = await fetch(base + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) }); return { status: r.status, ...(await r.json().catch(() => ({}))) }; };
 const connect = (code, secret, name, pub) => new Promise((res, rej) => {
@@ -228,6 +228,13 @@ try {
   assert.ok(!rgReceipts.some((r) => r.state === 'read'), 'hidden / own messages never produce read receipts');
   rgInbox.disconnect(); rgHidden.disconnect(); ro.disconnect(); rg.disconnect();
   console.log('ok  sent / delivered / read receipts');
+  // ---- public privacy policy page ----
+  const pol = await fetch(base + '/privacy');
+  const polHtml = await pol.text();
+  assert.equal(pol.status, 200);
+  assert.ok(polHtml.includes('Privacy Policy') && polHtml.includes('privacy@test.invalid') && !polHtml.includes('{{'), 'privacy page is served with the contact address filled in');
+  console.log('ok  /privacy page');
+
   // ---- encrypted display name ("meta") + flood protection ----
   const MC = 'MMETA345', MO = hex('3'), MG = hex('4');
   await post('/api/host', { code: MC, secret: MO, pub: PUB_A });

@@ -2,14 +2,16 @@
 # Gamaroon server installer for a fresh Ubuntu VM (tested layout: Oracle Cloud Always Free, Ubuntu 22.04/24.04).
 #
 #   1. copy the server folder to the VM:   scp -r server deploy ubuntu@<VM-IP>:~/
-#   2. on the VM:                          sudo bash ~/deploy/setup.sh your.domain.name
+#   2. on the VM:                          sudo bash ~/deploy/setup.sh your.domain.name you@example.com
+#      (the e-mail is shown as the contact address on https://your.domain.name/privacy)
 #
 # It installs Node.js 20, runs the server as a locked-down systemd service (restarts on crash/reboot) and puts
 # Caddy in front of it for automatic HTTPS (WebSockets work). Nothing is stored on disk by the server itself.
 set -euo pipefail
 
 DOMAIN="${1:-}"
-if [[ -z "$DOMAIN" ]]; then echo "usage: sudo bash setup.sh your.domain.name"; exit 1; fi
+EMAIL="${2:-}"
+if [[ -z "$DOMAIN" ]]; then echo "usage: sudo bash setup.sh your.domain.name [contact@email]"; exit 1; fi
 if [[ $EUID -ne 0 ]]; then echo "run with sudo"; exit 1; fi
 
 SRC="$(cd "$(dirname "$0")/.." && pwd)"        # folder that contains server/ and deploy/
@@ -40,6 +42,14 @@ rsync -a --delete --exclude node_modules --exclude test.mjs "$SRC/server/" "$APP
 (cd "$APP/server" && npm ci --omit=dev)
 chown -R gamaroon:gamaroon "$APP"
 
+echo "==> Settings file (/etc/gamaroon.env)"
+if [[ -n "$EMAIL" ]]; then
+  printf 'PRIVACY_EMAIL=%s\n' "$EMAIL" > /etc/gamaroon.env
+elif [[ ! -f /etc/gamaroon.env ]]; then
+  printf '# PRIVACY_EMAIL=you@example.com\n' > /etc/gamaroon.env
+fi
+chmod 644 /etc/gamaroon.env
+
 echo "==> systemd service"
 install -m 644 "$SRC/deploy/gamaroon.service" /etc/systemd/system/gamaroon.service
 systemctl daemon-reload
@@ -64,5 +74,6 @@ sleep 3
 echo
 echo "Server status:"; systemctl --no-pager --lines=3 status gamaroon || true
 echo
+echo "Privacy policy page: https://$DOMAIN/privacy"
 echo "Test (from anywhere): https://$DOMAIN/   (first HTTPS request can take ~30 s while Caddy gets the certificate)"
 echo "Remember: also open ports 80 and 443 in the Oracle Cloud network rules (see docs/DEPLOY.md)."

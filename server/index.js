@@ -364,6 +364,18 @@ setInterval(() => {
   for (const [k, list] of connHits) if (!list.some((t) => now - t < 60000)) connHits.delete(k);
 }, SWEEP_MS).unref();
 
+// Public privacy policy (needed by app stores). PRIVACY_EMAIL sets the contact address shown on the page.
+const PRIVACY_EMAIL = process.env.PRIVACY_EMAIL || 'support@example.com';
+const PRIVACY_DATE = process.env.PRIVACY_DATE || 'November 2026';
+app.get('/privacy', (_req, res) => {
+  try {
+    const html = fs.readFileSync(path.join(__dirname, 'privacy.html'), 'utf8')
+      .replaceAll('{{CONTACT_EMAIL}}', PRIVACY_EMAIL.replace(/[<>"&]/g, ''))
+      .replaceAll('{{UPDATED}}', PRIVACY_DATE.replace(/[<>"&]/g, ''));
+    res.set('Cache-Control', 'public, max-age=300').type('html').send(html);
+  } catch { res.status(404).end(); }
+});
+
 // In production the same server can host the built web app.
 const dist = path.join(__dirname, '../client/dist');
 if (fs.existsSync(dist)) {

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gamaroon Privacy Policy</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --bg:#fff; --text:#1c1c1e; --muted:#6c6c70; --accent:#9b1c3c; --card:#f6f1f3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111; --text:#f2f2f2; --muted:#a0a0a6; --accent:#e0577a; --card:#1c1a1d; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.6 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 18px 60px; }
+  h1 { font-size: 1.9rem; margin: 0 0 4px; color: var(--accent); }
+  h2 { font-size: 1.1rem; margin: 28px 0 6px; }
+  p, li { margin: 6px 0; }
+  ul { padding-left: 20px; }
+  .muted { color: var(--muted); font-size: .9rem; }
+  .card { background: var(--card); border-radius: 14px; padding: 14px 16px; margin: 14px 0; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Gamaroon &ndash; Privacy Policy</h1>
+  <p class="muted">Last updated: {{UPDATED}}</p>
+
+  <div class="card">
+    <b>In short:</b> no accounts, no ads, no analytics. Messages are end-to-end encrypted on your devices, held only in
+    the server's memory for 30 minutes at most, and never written to a disk or database.
+  </div>
+
+  <h2>What the app is</h2>
+  <p>Gamaroon is a collection of mini games (Snake, 2048, Memory, Tic Tac Toe, Mines, Slide) that also contains a
+  private one-to-one chat. The chat stays hidden until you open it with the secret gesture and passcode you set. This
+  is a deliberate privacy feature chosen by the user, and it is described in the store listing.</p>
+
+  <h2>Accounts and personal data</h2>
+  <p>There are no accounts. We do not ask for your phone number, email address, contacts or location. The display
+  name you choose is sent to your friend end-to-end encrypted; the server cannot read it.</p>
+
+  <h2>What the server processes</h2>
+  <ul>
+    <li><b>Messages, photos, voice notes, videos and files.</b> They are encrypted on your device before they are sent.
+    The server only relays encrypted data. It is kept in memory (RAM) and deleted automatically 30 minutes after
+    sending, when either person clears the chat, when a chat is deleted or left, or when the server restarts. It is
+    never written to disk or to a database.</li>
+    <li><b>Technical data needed to deliver messages:</b> the chat code, a secret that proves membership (stored only as
+    a hash), the two devices' public encryption keys, message times, the approximate size class of each message, sent /
+    delivered / read status and whether a device is online. This data lives in memory and disappears with the chat.</li>
+    <li><b>IP address.</b> Your connection's IP address is visible to the server and is used in memory to limit abuse
+    (rate limiting). We do not store it and do not keep access logs of chats.</li>
+  </ul>
+
+  <h2>What stays on your device</h2>
+  <p>Your passcode (stored only as a salted, slow hash), your chat code and secret, your encryption keys (on Android
+  the private key is protected with the Android Keystore), your settings and game scores. Messages are never saved on
+  the device.</p>
+
+  <h2>Security</h2>
+  <ul>
+    <li>All traffic uses HTTPS.</li>
+    <li>End-to-end encryption (ECDH key agreement and AES-256-GCM). You can compare a safety number with your friend to
+    detect a man-in-the-middle, and the app warns you if your friend's key changes.</li>
+    <li>Screenshots, screen recording and the recent-apps preview are blocked by default (you can change this in
+    Settings).</li>
+    <li><b>Silent Auto-Wipe</b> (optional, on by default): after 3 wrong passcode attempts in a row the app erases the
+    chat data on the device and asks the server to delete the chat for both people. This can remove the conversation for
+    your friend too. You can turn it off in Settings.</li>
+  </ul>
+
+  <h2>Notifications and background connection</h2>
+  <p>To tell you that something is waiting while the app is closed, the Android app keeps a small background connection
+  to the server (a foreground service, shown as a low-priority notification). When your friend writes, it shows a
+  generic message such as &ldquo;Your game is waiting!&rdquo;. Notifications never contain names or message content.
+  You can turn this off with the &ldquo;Secret signal&rdquo; switch in Settings.</p>
+
+  <h2>Permissions</h2>
+  <ul>
+    <li><b>Internet</b> &ndash; to reach the server.</li>
+    <li><b>Notifications</b> &ndash; the generic game reminder described above.</li>
+    <li><b>Foreground service (data sync)</b> &ndash; keeps the background connection alive.</li>
+    <li><b>Microphone</b> &ndash; only when you record a voice message.</li>
+    <li>Photos, videos and files are chosen through the system file picker; the app does not read your gallery.</li>
+  </ul>
+
+  <h2>Sharing</h2>
+  <p>We do not sell or share personal data, show ads, or use analytics or tracking tools. Chat content can only be read
+  by the two people in a chat; the server operator can see only the technical data listed above.</p>
+
+  <h2>Children</h2>
+  <p>The app is not directed to children under 13.</p>
+
+  <h2>Your choices</h2>
+  <p>You can delete a chat or leave it at any time in the app, which deletes its data on the server. Uninstalling the app
+  removes everything stored on your device.</p>
+
+  <h2>Contact and abuse reports</h2>
+  <p>Questions, abuse reports or requests: <a href="mailto:{{CONTACT_EMAIL}}">{{CONTACT_EMAIL}}</a></p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes we will update this page and the date above.</p>
+</main>
+</body>
+</html>

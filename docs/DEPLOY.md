@@ -42,12 +42,16 @@ ssh -i path\to\ssh-key.key ubuntu@<VM-IP>
 On the VM:
 
 ```bash
-sudo bash ~/deploy/setup.sh gamaroon.duckdns.org
+sudo bash ~/deploy/setup.sh gamaroon.duckdns.org you@example.com
 ```
+
+(`you@example.com` is the contact address shown on the privacy policy page; use an address you are happy to make public.)
 
 The script installs Node.js 20 and Caddy, runs the server as a restricted systemd service (auto-restart, starts on
 boot), and gets an HTTPS certificate automatically. When it finishes, open `https://gamaroon.duckdns.org/` in a
 browser: the server answers (the first request can take about 30 seconds while the certificate is issued).
+
+The public privacy policy (required by the Play Store) is now at `https://gamaroon.duckdns.org/privacy`.
 
 ## 4. Point the app at it and build
 
@@ -66,7 +70,7 @@ cd android
 
 ```powershell
 scp -i path\to\ssh-key.key -r server deploy ubuntu@<VM-IP>:~/
-ssh -i path\to\ssh-key.key ubuntu@<VM-IP> "sudo bash ~/deploy/setup.sh gamaroon.duckdns.org"
+ssh -i path\to\ssh-key.key ubuntu@<VM-IP> "sudo bash ~/deploy/setup.sh gamaroon.duckdns.org you@example.com"
 ```
 
 ## Good to know
