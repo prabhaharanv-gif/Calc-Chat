@@ -3,3 +3,8 @@ dist
 *.apk
 *.zip
 deploy/huggingface/space/
+client/android/keystore.properties
+release-keys/
+*.jks
+*.keystore
+*.aab

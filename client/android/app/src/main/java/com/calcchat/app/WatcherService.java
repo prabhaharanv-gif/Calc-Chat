@@ -58,8 +58,9 @@ public class WatcherService extends Service {
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setContentIntent(openApp())
             .build();
-        if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(SERVICE_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        if (Build.VERSION.SDK_INT >= 34) {
+            // "special use": no 6-hour daily limit like dataSync has on Android 15+ (see the manifest for the declared reason)
+            startForeground(SERVICE_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         } else {
             startForeground(SERVICE_ID, n);
         }
