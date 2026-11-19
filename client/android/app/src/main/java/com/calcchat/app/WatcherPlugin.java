@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
-import android.content.pm.ApplicationInfo;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
 import androidx.core.app.ActivityCompat;
@@ -72,9 +71,8 @@ public class WatcherPlugin extends Plugin {
     @PluginMethod
     public void getSecure(PluginCall call) {
         Context ctx = getContext();
-        boolean isDebug = (ctx.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         JSObject r = new JSObject();
-        r.put("enabled", ctx.getSharedPreferences("ui", Context.MODE_PRIVATE).getBoolean("secure", !isDebug));
+        r.put("enabled", ctx.getSharedPreferences("ui", Context.MODE_PRIVATE).getBoolean("secure", true));
         call.resolve(r);
     }
 
