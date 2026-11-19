@@ -19,7 +19,7 @@ android {
         }
     }
     defaultConfig {
-        applicationId "com.calcchat.app"
+        applicationId "com.gamaroon.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
