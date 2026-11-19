@@ -1,9 +1,12 @@
 **/node_modules
-client
-docs
-deploy
 .git
 .claude
+docs
+deploy
 *.apk
 server/test.mjs
 server/remote-test.mjs
+client/dist
+client/android
+client/icon
+client/*-test.mjs
