@@ -14,6 +14,8 @@ const code = Array.from(crypto.randomBytes(8), (b) => ALPHABET[b % 32]).join('')
 const OWN = crypto.randomBytes(24).toString('hex'), GUEST = crypto.randomBytes(24).toString('hex');
 const PUB_A = '{"kty":"EC","x":"A"}', PUB_B = '{"kty":"EC","x":"B"}';
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+// wait until a condition holds (the network round trip to a distant server can take a while), up to `ms`
+const until = async (fn, ms = 6000) => { const t = Date.now(); while (Date.now() - t < ms) { if (fn()) return true; await wait(100); } return fn(); };
 const post = async (p, b) => {
   const r = await fetch(base + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
   return { status: r.status, ...(await r.json().catch(() => ({}))) };
@@ -51,14 +53,14 @@ try {
   const a = await connect(OWN, PUB_A);
   const b = await connect(GUEST, PUB_B);
   assert.equal(a.io.engine.transport.name, 'websocket');
-  await wait(300);
+  await until(() => a.presence.owner && a.presence.guest);
   assert.ok(a.presence.owner && a.presence.guest, 'both devices show as online');
   pass(`two devices connected over ${base.startsWith('https') ? 'wss' : 'ws'} (websocket transport)`);
 
   // 3. messages both ways + 30 minute expiry + receipts
   assert.equal((await send(a, 'ciphertext-1')).ok, true);
   assert.equal((await send(b, 'ciphertext-2')).ok, true);
-  await wait(400);
+  await until(() => a.msgs.length === 2 && b.msgs.length === 2 && a.receipts.some((r) => r.state === 'delivered'));
   assert.equal(a.msgs.length, 2); assert.equal(b.msgs.length, 2);
   assert.ok(a.msgs.every((m) => m.expiresAt - m.time === 30 * 60 * 1000), 'messages expire after exactly 30 minutes');
   assert.ok(a.receipts.some((r) => r.state === 'delivered'), 'delivered receipt arrives');
@@ -67,24 +69,25 @@ try {
   // 4. reconnect after a network interruption (the connection is cut abruptly, the client reconnects by itself)
   const before = b.connects;
   b.io.engine.close();
-  await wait(2500);
+  await until(() => b.connected && b.connects > before, 10000);
   assert.ok(b.connected && b.connects > before, 'client reconnected by itself');
+  await until(() => b.msgs.length === 2);
   assert.equal(b.msgs.length, 2, 'history is restored after reconnecting');
   assert.equal((await send(b, 'after-reconnect')).ok, true);
-  await wait(300);
+  await until(() => a.msgs.length === 3);
   assert.equal(a.msgs.length, 3);
   pass('reconnection after a dropped connection (history restored, messaging continues)');
 
   // 5. clear for both
   a.emit('clear');
-  await wait(400);
+  await until(() => a.msgs.length === 0 && b.msgs.length === 0);
   assert.equal(a.msgs.length, 0); assert.equal(b.msgs.length, 0);
   pass('clear-for-both empties the chat on both devices');
 
   // 6. server-side wipe (silent auto-wipe): the owner closes the room, the guest is told quietly, nothing is left
   assert.equal((await post('/api/close', { code, secret: 'f'.repeat(48), silent: true })).status, 403, 'a stranger cannot delete the room');
   assert.equal((await post('/api/close', { code, secret: OWN, silent: true })).status, 200);
-  await wait(500);
+  await until(() => b.closed);
   assert.deepEqual(b.closed, { silent: true });
   assert.equal((await post('/api/join', { code, secret: GUEST })).status, 404, 'room is gone on the server');
   assert.equal((await post('/api/close', { code, secret: OWN, silent: true })).status, 200, 'repeating the wipe is harmless');
