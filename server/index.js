@@ -74,15 +74,20 @@ const tooMany = (socket, kind, max) => {
   return list.length > max;
 };
 
+// HTTP rate limits per client address and per minute. Behind a hosting proxy the proxy's own address is the same for
+// everybody, so the client address is the first X-Forwarded-For entry (falls back to the connection address). That entry can
+// be forged, so each endpoint also has a GLOBAL cap per minute: guessing codes stays impractical even with forged addresses.
 const hits = new Map();
-const limited = (req, max) => {
-  const key = req.ip + req.path;
+const clientIp = (req) => String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip;
+const bumped = (key, windowMs) => {
   const now = Date.now();
-  const list = (hits.get(key) || []).filter((t) => now - t < 60000);
+  const list = (hits.get(key) || []).filter((t) => now - t < windowMs);
   list.push(now);
   hits.set(key, list);
-  return list.length > max;
+  return list.length;
 };
+const limited = (req, max, globalMax = max * 20) =>
+  bumped(clientIp(req) + req.path, 60000) > max || bumped('*' + req.path, 60000) > globalMax;
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -150,7 +155,7 @@ app.post('/api/host', (req, res) => {
 
 // Second person joins using the owner's code.
 app.post('/api/join', (req, res) => {
-  if (limited(req, 20)) return res.status(429).json({ error: 'rate' });
+  if (limited(req, 40, 300)) return res.status(429).json({ error: 'rate' });
   const { code, secret, name, pub } = req.body || {};
   if (!validCode(code) || !validSecret(secret)) return res.status(400).json({ error: 'bad_code' });
   const room = rooms.get(code);

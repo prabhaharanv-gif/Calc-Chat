@@ -235,6 +235,14 @@ try {
   assert.ok(polHtml.includes('Privacy Policy') && polHtml.includes('privacy@test.invalid') && !polHtml.includes('{{'), 'privacy page is served with the contact address filled in');
   console.log('ok  /privacy page');
 
+  // ---- HTTP rate limits are per client address (X-Forwarded-For), not shared by everybody behind a proxy ----
+  const joinAs = (ip) => fetch(base + '/api/join', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': ip }, body: JSON.stringify({ code: 'RATELMNP', secret: hex('9') }) }).then((r) => r.status);
+  let first429 = 0;
+  for (let i = 0; i < 50; i++) { if ((await joinAs('10.0.0.1')) === 429) { first429 = i + 1; break; } }
+  assert.ok(first429 > 30 && first429 <= 45, `one address is limited after ~40 joins (got ${first429})`);
+  assert.equal(await joinAs('10.0.0.2'), 404, 'another address is not affected (404 = room not found, not 429)');
+  console.log('ok  HTTP rate limits are per client address');
+
   // ---- encrypted display name ("meta") + flood protection ----
   const MC = 'MMETA345', MO = hex('3'), MG = hex('4');
   await post('/api/host', { code: MC, secret: MO, pub: PUB_A });
