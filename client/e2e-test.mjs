@@ -32,4 +32,21 @@ await assert.rejects(decText(kB, tampered.buffer), 'tampering is detected');
 assert.equal(await safetyNumber(pubA, pubB), await safetyNumber(pubB, pubA), 'safety number is symmetric');
 assert.notEqual(await safetyNumber(pubA, pubB), await safetyNumber(pubA, pubE), 'safety number changes if a key is swapped');
 assert.match(await safetyNumber(pubA, pubB), /^\d{4} \d{4} \d{4}$/);
+// padding: the server only sees size classes, and everything still round-trips exactly
+const { paddedSize } = await import('./src/e2e.js');
+const sizeOf = async (s) => (await encText(kA, s)).byteLength;
+assert.equal(await sizeOf('hi'), await sizeOf('a slightly longer message than hi'), 'short messages look identical in size');
+assert.notEqual(await sizeOf('hi'), await sizeOf('x'.repeat(5000)), 'very different sizes are still different classes');
+assert.equal(await decText(kB, await encText(kA, 'x'.repeat(5000))), 'x'.repeat(5000), 'long text round-trips');
+assert.equal(await decText(kB, await encText(kA, '')), '', 'empty text round-trips');
+for (const n of [1, 100, 5000, 70000, 1500000]) {
+  const b = new Uint8Array(n); for (let o = 0; o < n; o += 65536) crypto.getRandomValues(b.subarray(o, Math.min(n, o + 65536)));
+  assert.deepEqual(new Uint8Array(await decryptBytes(kB, await encryptBytes(kA, b, { min: 4096 }))), b, `binary ${n} bytes round-trips`);
+}
+assert.equal(paddedSize(10), 256); assert.equal(paddedSize(257), 512); assert.equal(paddedSize((1 << 20) + 1), 2 << 20);
+assert.equal(await sizeOf('x'.repeat(19500)), 12 + 19500 + 5 + 16, 'near the server limit: sent unpadded instead of failing');
+const nameMeta = await encText(kA, 'Prabha', { min: 64, max: 200 });
+assert.ok(nameMeta.byteLength <= 256, 'padded display name fits the server meta limit');
+assert.equal(await decText(kB, nameMeta), 'Prabha');
+console.log('e2e: padding checks passed');
 console.log('e2e: all checks passed');

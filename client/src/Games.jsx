@@ -9,7 +9,7 @@ import GameHeader from './GameHeader.jsx';
 import PinPad from './PinPad.jsx';
 
 // The front screen: a normal-looking games app. Holding ANY game title (or this hub's title) for
-// ~3 seconds opens the hidden PIN pad. The titles turn green when a message is waiting.
+// ~2 seconds opens the hidden PIN pad. The titles turn green when a message is waiting.
 function Icon2({ id }) {
   const s = { fill: 'none', stroke: '#fff', strokeWidth: 4, strokeLinecap: 'round', strokeLinejoin: 'round' };
   const props = { viewBox: '0 0 64 64', width: 64, height: 64, 'aria-hidden': true };

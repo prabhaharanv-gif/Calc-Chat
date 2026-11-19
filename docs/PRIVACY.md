@@ -6,7 +6,7 @@ Last updated: [DATE]
 
 **Accounts.** None. We do not ask for your name, phone number or email.
 
-**What we process.** Messages, photos, voice notes and videos you send are relayed through our server so the other person receives them. They are held only in server memory (RAM), are never written to disk or a database, and are automatically deleted 4 hours after sending, when either person clears the chat, or when a wipe is triggered (3 wrong passcode attempts). Restarting the server also deletes them.
+**What we process.** Messages, photos, voice notes and videos you send are relayed through our server so the other person receives them. They are held only in server memory (RAM), are never written to disk or a database, and are automatically deleted 30 minutes after sending, when either person clears the chat, or when a wipe is triggered (3 wrong passcode attempts). Restarting the server also deletes them.
 
 **What stays on your device.** Your hashed passcode, your chat code and a random secret that proves you own it. Messages are not saved on the device.
 

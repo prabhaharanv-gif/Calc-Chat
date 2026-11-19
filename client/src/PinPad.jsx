@@ -1,16 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
+import { load } from './storage.js';
 
 const PAD = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', '✓'];
-const LONG_PRESS_MS = 2500;
+const LONG_PRESS_MS = 2000;
 
-// Hold an element (a game's title) for ~3 seconds to trigger the hidden PIN pad.
-export function useLongPress(onTrigger, ms = LONG_PRESS_MS) {
+// Hold an element (a game's title) for 1-3 seconds (the user picks it in Settings) to trigger the hidden PIN pad.
+// Hold time 0 means "no hold needed": a simple tap on the title opens the PIN pad instead.
+const holdTime = () => { const v = load().holdMs; return v === 0 ? 0 : v || LONG_PRESS_MS; };
+export function useLongPress(onTrigger, ms) {
   const timer = useRef(null);
   const cancel = useCallback(() => clearTimeout(timer.current), []);
   useEffect(() => cancel, [cancel]);
   return {
-    onPointerDown: () => { clearTimeout(timer.current); timer.current = setTimeout(onTrigger, ms); },
+    onPointerDown: () => {
+      const t = ms ?? holdTime();
+      clearTimeout(timer.current);
+      if (t > 0) timer.current = setTimeout(onTrigger, t);
+    },
+    onClick: () => { if ((ms ?? holdTime()) === 0) onTrigger(); },
     onPointerUp: cancel,
     onPointerLeave: cancel,
     onPointerCancel: cancel,
@@ -23,6 +31,7 @@ export default function PinPad({ passLen, onCode, onClose }) {
   const [pin, setPin] = useState('');
   const [shake, setShake] = useState(false);
   const [busy, setBusy] = useState(false);
+  const skip = load().pinOn === false; // passcode lock switched off in Settings: no PIN pad, open straight away
   const [granted, setGranted] = useState(false); // correct PIN: play the unlock animation while the screen fades into the chat
 
   const submit = useCallback(async (code) => {
@@ -58,6 +67,9 @@ export default function PinPad({ passLen, onCode, onClose }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
+
+  useEffect(() => { if (skip) onCode('', { bypass: true }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (skip) return null;
 
   return (
     <div className="pinwrap" onClick={() => !busy && onClose()}>

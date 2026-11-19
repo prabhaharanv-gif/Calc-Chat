@@ -5,6 +5,7 @@ import { post } from './api.js';
 import Icon from './Icon.jsx';
 import { deriveKey, encryptBytes, decryptBytes, encText, decText, safetyNumber } from './e2e.js';
 import { getIdentity } from './identity.js';
+import { load, save } from './storage.js';
 
 const MAX_FILE = 25 * 1024 * 1024;
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -17,6 +18,18 @@ const preview = (m) => {
   if (m.type === 'file') return m.name || 'File';
   return LABELS[m.type] || 'Message';
 };
+// Sent (one tick) / Delivered (two ticks) / Read (two green ticks), shown on your own messages.
+const tickState = (m) => (m.read ? 'read' : m.delivered ? 'delivered' : 'sent');
+const TICK_LABEL = { sent: 'Sent', delivered: 'Delivered', read: 'Read' };
+function Ticks({ state }) {
+  return (
+    <svg className={`ticks ${state}`} viewBox="0 0 26 24" width="20" height="17" role="img" aria-label={TICK_LABEL[state]}>
+      <title>{TICK_LABEL[state]}</title>
+      <path d="M2 13l5 5L17 7" />
+      {state !== 'sent' && <path d="M7 13l5 5L22 7" />}
+    </svg>
+  );
+}
 const revoke = (list) => list.forEach((m) => m.url && URL.revokeObjectURL(m.url));
 
 // Decrypt one message from the server. Media becomes a temporary in-memory blob URL.
@@ -37,7 +50,7 @@ async function open(m, key) {
   }
 }
 
-export default function Chat({ role, code, secret, name, onBack, onLock, theme, onTheme, onSeen }) {
+export default function Chat({ role, code, secret, name, hidden = false, onBack, onLock, theme, onTheme, onSeen }) {
   const [msgs, setMsgs] = useState([]);
   const [text, setText] = useState('');
   const [status, setStatus] = useState('connecting');
@@ -45,6 +58,9 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
   const [presence, setPresence] = useState({ owner: false, guest: false });
   const [ready, setReady] = useState(false); // shared encryption key established
   const [safety, setSafety] = useState('');
+  const [peerNameE2E, setPeerNameE2E] = useState(''); // friend's name, decrypted on this device only
+  const [verified, setVerified] = useState(false); // the two people compared the safety number
+  const [keyChange, setKeyChange] = useState(false); // friend's key differs from the one we trusted before
   const [info, setInfo] = useState(false);
   const [recording, setRecording] = useState(false);
   const [menu, setMenu] = useState(null); // message whose action dropdown is open
@@ -57,7 +73,7 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
   const recRef = useRef(null);
   const endRef = useRef(null);
   const inputRef = useRef(null);
-  const keyBox = useRef({ pub: null, key: null, waiters: [] });
+  const keyBox = useRef({ pub: null, key: null, waiters: [], pending: null, activate: null, lastPresence: null });
   const chain = useRef(Promise.resolve());
 
   const setAll = (next) => { msgsRef.current = next; setMsgs(next); };
@@ -81,14 +97,14 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
       const id = await getIdentity();
       if (dead) return;
       if (!id) { setError('Secure chat needs HTTPS or the Android app.'); return; }
-      s = io(SERVER || undefined, { auth: { code, secret, name, pub: id.pubJson } });
+      s = io(SERVER || undefined, { auth: { code, secret, pub: id.pubJson, hidden } });
       sock.current = s;
 
       s.on('connect', () => { setStatus('online'); setError(''); });
       s.on('disconnect', () => setStatus('offline'));
       s.on('connect_error', async (e) => {
         if (e.message === 'no_room' && role === 'owner') {
-          try { await post('/api/host', { code, secret, name, pub: id.pubJson }); setTimeout(() => s.connect(), 300); return; } catch { /* fall through */ }
+          try { await post('/api/host', { code, secret, pub: id.pubJson }); setTimeout(() => s.connect(), 300); return; } catch { /* fall through */ }
         }
         if (e.message === 'no_room') setError('Chat not available yet. Ask the owner to open the app.');
         else if (e.message === 'forbidden') setError('You no longer have access to this chat.');
@@ -114,6 +130,10 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
         }
         setAll(msgsRef.current.map((m) => (m.id === rest.id ? { ...m, ...rest } : m)));
       }));
+      s.on('receipt', ({ ids, state }) => enqueue(async () => {
+        const hit = new Set(ids || []);
+        setAll(msgsRef.current.map((m) => (hit.has(m.id) ? { ...m, delivered: true, read: state === 'read' ? true : m.read } : m)));
+      }));
       s.on('deleted', ({ id: gone }) => enqueue(async () => {
         const m = msgsRef.current.find((x) => x.id === gone);
         if (m) revoke([m]);
@@ -128,27 +148,56 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
         setEditing(null);
         setMenu(null);
       }));
-      s.on('closed', () => { alert('This chat was closed by the owner.'); onBack(); });
+      s.on('closed', (d) => { if (!d?.silent) alert('This chat was closed by the owner.'); onBack(); });
 
       // The friend's public key arrives here; combine it with ours to get the shared secret.
+      // Trust on first use: the first safety number we see for this chat is remembered. If the friend's key later
+      // changes, nothing is decrypted or sent until the user compares the new number and chooses to trust it.
+      // Display names are sent encrypted ("meta"): the server only ever holds opaque bytes.
+      const refreshPeerName = async () => {
+        const p = box.lastPresence;
+        const meta = p && (role === 'owner' ? p.guestMeta : p.ownerMeta);
+        if (!meta || !box.key) return;
+        try { setPeerNameE2E(String(await decText(box.key, meta)).slice(0, 24)); } catch { /* old key: wait for the new one */ }
+      };
+      const activate = async (peerPub, sn) => {
+        const k = await deriveKey(id.privJwk, peerPub, code);
+        if (box.pub !== peerPub) return;
+        box.key = k;
+        box.pending = null;
+        setSafety(sn);
+        const trust = load().trust || {};
+        if (trust[code]?.safety !== sn) save({ trust: { ...trust, [code]: { safety: sn, verified: false } } });
+        setVerified(!!load().trust?.[code]?.verified);
+        setKeyChange(false);
+        setReady(true);
+        box.waiters.splice(0).forEach((r) => r());
+        try { s.emit('meta', await encText(k, name || '', { min: 64, max: 200 })); } catch { /* ignore */ }
+        await refreshPeerName();
+      };
+      box.activate = activate;
       s.on('presence', async (p) => {
         setPresence(p);
+        box.lastPresence = p;
         const peerPub = (role === 'owner' ? p.guestPub : p.ownerPub) || null;
-        if (peerPub === box.pub) return;
+        if (peerPub === box.pub) { refreshPeerName(); return; }
         box.pub = peerPub;
-        if (!peerPub) { box.key = null; setReady(false); setSafety(''); return; }
+        if (!peerPub) { box.key = null; box.pending = null; setReady(false); setSafety(''); setKeyChange(false); setPeerNameE2E(''); return; }
         try {
-          const k = await deriveKey(id.privJwk, peerPub, code);
+          const sn = await safetyNumber(id.pubJson, peerPub);
           if (box.pub !== peerPub) return;
-          box.key = k;
-          setReady(true);
-          setSafety(await safetyNumber(id.pubJson, peerPub));
-          box.waiters.splice(0).forEach((r) => r());
+          const known = load().trust?.[code];
+          if (known && known.safety !== sn) {
+            box.key = null; box.pending = { peerPub, sn };
+            setReady(false); setSafety(sn); setVerified(false); setKeyChange(true);
+            return;
+          }
+          await activate(peerPub, sn);
         } catch { setError("Your friend's encryption key is invalid."); }
       });
     })();
 
-    // Local auto-delete when a message reaches its 4 hour limit.
+    // Local auto-delete when a message reaches its 30 minute limit.
     const timer = setInterval(() => {
       const now = Date.now();
       const keep = [];
@@ -168,6 +217,22 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, secret, role]);
 
+  // Read receipts: tell the sender which of their messages this screen has shown. Not sent while the screen is
+  // hidden, or when you chose to appear offline in this chat.
+  const readSent = useRef(new Set());
+  useEffect(() => {
+    const send = () => {
+      if (hidden || document.visibilityState !== 'visible' || !ready) return;
+      const ids = msgs.filter((m) => m.from !== role && !m.read && !readSent.current.has(m.id)).map((m) => m.id);
+      if (!ids.length) return;
+      ids.forEach((id) => readSent.current.add(id));
+      sock.current?.emit('read', { ids });
+    };
+    send();
+    document.addEventListener('visibilitychange', send);
+    return () => document.removeEventListener('visibilitychange', send);
+  }, [msgs, role, hidden, ready]);
+
   // Everything from the friend that is on screen counts as read (turns the front-screen signal back off).
   useEffect(() => {
     let t = 0;
@@ -176,9 +241,23 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [msgs, role]);
 
-  const peerName = (role === 'owner' ? presence.guestName : presence.ownerName) || 'Friend';
+  const acceptKey = async () => {
+    const pd = keyBox.current.pending;
+    if (!pd) return;
+    const trust = load().trust || {};
+    save({ trust: { ...trust, [code]: { safety: pd.sn, verified: false } } });
+    try { await keyBox.current.activate(pd.peerPub, pd.sn); } catch { setError("Your friend's encryption key is invalid."); }
+  };
+  const toggleVerified = () => {
+    const trust = load().trust || {};
+    if (!trust[code]) return;
+    save({ trust: { ...trust, [code]: { ...trust[code], verified: !verified } } });
+    setVerified(!verified);
+  };
+
+  const peerName = peerNameE2E || 'Friend';
   const peerOnline = role === 'owner' ? presence.guest : presence.owner;
-  const sub = error || (status !== 'online' ? 'Connecting...' : peerOnline ? 'Online' : 'Waiting for the other person');
+  const sub = error || (status !== 'online' ? 'Connecting...' : peerOnline ? 'Online' : 'Waiting for friend');
 
   // Messages typed before the friend has joined wait here (in memory only, never saved). They are encrypted and
   // sent automatically as soon as the shared key exists.
@@ -195,8 +274,8 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
     sock.current?.emit('message', { type: 'text', payload, replyTo: replyId });
   };
   const transmitBlob = async (key, blob, type, extra, replyId) => {
-    const meta = await encText(key, JSON.stringify({ name: blob.name || '', mime: blob.type || '', ...extra }));
-    const data = await encryptBytes(key, await blob.arrayBuffer());
+    const meta = await encText(key, JSON.stringify({ name: blob.name || '', mime: blob.type || '', ...extra }), { min: 256, max: 1900 });
+    const data = await encryptBytes(key, await blob.arrayBuffer(), { min: 4096, max: 26214400 - 64 });
     return new Promise((resolve) => {
       sock.current?.emit('message', { type, data, meta, replyTo: replyId }, (r) => {
         if (!r?.ok) alert('Could not send (max 25 MB).');
@@ -236,6 +315,7 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
       setReplyTo(null);
     }
     setText('');
+    inputRef.current?.focus(); // keep the keyboard open for the next message
   };
 
   const sendBlob = async (blob, type, extra = {}) => {
@@ -334,7 +414,7 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
         <div className="grow" onClick={() => setInfo(true)} style={{ cursor: 'pointer' }}>
           <div>{peerName}</div>
           <div className="muted small subline">
-            {ready && !error && <Icon name="lock" size={11} />}{sub}
+            {ready && !error && <span className={verified ? 'vf' : ''}><Icon name={verified ? 'shield' : 'lock'} size={11} /></span>}<span className="subtxt">{sub}</span>
           </div>
         </div>
         <button className="iconbtn" onClick={onTheme} aria-label="Switch theme"><Icon name={theme === 'dark' ? 'sun' : 'moon'} /></button>
@@ -343,12 +423,14 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
       </header>
 
       <div className="msgs">
-        {msgs.length === 0 && outbox.length === 0 && (
-          <div className="empty">
-            {role === 'owner' ? <>Share your code <b>{code}</b> with a friend to start chatting.</> : 'Say hi 👋'}
-            <div className="small">
-              {ready ? 'End-to-end encrypted. ' : 'You can type now; messages are sent when your friend joins. '}
-              Messages auto-delete after 4 hours. Nothing is saved.
+        {keyChange && (
+          <div className="keywarn" role="alert">
+            <b>Safety number changed</b>
+            <span>{peerName}&apos;s encryption key is different from before (new phone, reinstall or wipe), or someone may be
+              listening in. Messages are paused. Compare the new number with {peerName} first.</span>
+            <div className="row">
+              <button onClick={() => setInfo(true)}>Compare</button>
+              <button className="bad" onClick={acceptKey}>Trust new key</button>
             </div>
           </div>
         )}
@@ -359,6 +441,7 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
             <div className="time">
               {m.edited && <span>edited</span>}
               {new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {mine && <Ticks state={tickState(m)} />}
             </div>
           );
           const broken = <div className="txt muted"><i>Can&apos;t decrypt this message</i></div>;
@@ -433,9 +516,10 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
           <input type="file" accept="image/*,video/*,audio/*,*/*" onChange={onPick} hidden />
         </label>
         <input ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} disabled={recording}
-          placeholder={recording ? '● Recording... tap mic to send' : ready ? 'Type a message' : 'Type a message (sent when your friend joins)'} />
+          placeholder={recording ? '● Recording... tap mic to send' : 'Type a message'} />
         {text.trim() ? (
-          <button className="send">{editing ? 'Save' : 'Send'}</button>
+          // onMouseDown/onTouchStart keep the text box focused, so tapping Send does not close the keyboard
+          <button className="send" onMouseDown={(e) => e.preventDefault()}>{editing ? 'Save' : 'Send'}</button>
         ) : (
           <button type="button" className={`icon mic ${recording ? 'rec' : ''}`} onClick={toggleRecord}><Icon name="mic" size={20} /></button>
         )}
@@ -445,12 +529,17 @@ export default function Chat({ role, code, secret, name, onBack, onLock, theme, 
         <div className="popwrap" onClick={() => setInfo(false)}>
           <div className="pop infopop" onClick={(e) => e.stopPropagation()}>
             <div className="infohead"><Icon name="shield" size={18} />End-to-end encrypted</div>
-            {ready ? (
+            {ready || keyChange ? (
               <>
                 <p>Only you and {peerName} can read these messages. Not even the server can.</p>
                 <div className="muted small">Safety number</div>
                 <div className="safety">{safety}</div>
                 <p className="muted small">Compare this number with your friend (call or in person). If it matches, nobody is listening in.</p>
+                {ready && (
+                  <button className={`verifybtn ${verified ? 'on' : ''}`} onClick={toggleVerified}>
+                    <Icon name="shield" size={15} />{verified ? 'Verified (tap to undo)' : 'Mark as verified'}
+                  </button>
+                )}
               </>
             ) : (
               <p>Encryption starts as soon as your friend joins.</p>
