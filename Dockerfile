@@ -2,7 +2,7 @@
 # Everything lives in RAM: no volumes and no database are needed, and only ONE instance may run.
 
 # 1) build the web app. Same-origin build (no VITE_SERVER_URL): the page talks to the server that serves it.
-FROM node:20-slim AS web
+FROM node:22-slim AS web
 WORKDIR /web
 COPY client/package.json client/package-lock.json ./
 RUN npm ci
