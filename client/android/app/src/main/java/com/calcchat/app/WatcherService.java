@@ -52,7 +52,7 @@ public class WatcherService extends Service {
         createChannels();
         Notification n = new NotificationCompat.Builder(this, CH_SERVICE)
             .setSmallIcon(android.R.drawable.ic_media_play)
-            .setContentTitle("Mini Games")
+            .setContentTitle("Gamaroon")
             .setContentText("Ready to play")
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_MIN)
@@ -150,7 +150,7 @@ public class WatcherService extends Service {
         if (!nm.areNotificationsEnabled()) return;
         Notification n = new NotificationCompat.Builder(this, CH_ALERT)
             .setSmallIcon(android.R.drawable.ic_media_play)
-            .setContentTitle("Mini Games")
+            .setContentTitle("Gamaroon")
             .setContentText(TEXTS[rnd.nextInt(TEXTS.length)])
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

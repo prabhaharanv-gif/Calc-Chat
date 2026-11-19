@@ -1,10 +1,10 @@
-# Mini Games (private chat inside)
+# Gamaroon (private chat inside)
 
 A private 1:1 chat hidden inside a **games app**: a colourful hub with six real games (Snake, 2048, Memory, Tic Tac Toe, Mines, Slide).
 
 ## How it works
 - **No registration.** First launch: your name and a 4-8 digit passcode (stored only on the device, hashed).
-- The front screen is a normal games hub. Play anything. **Hold any game title (or "Mini Games") for 3 seconds** and a hidden PIN pad appears inside the game board; enter your passcode to open the chat. A wrong PIN just shakes, no hint. **3 wrong PINs wipe every chat** this device is part of (retried automatically if the phone was offline).
+- The front screen is a normal games hub. Play anything. **Hold any game title (or "Gamaroon") for 1-3 seconds, or just tap it if you switched the hold off in Settings** and a hidden PIN pad appears inside the game board; enter your passcode to open the chat. A wrong PIN just shakes, no hint. **3 wrong PINs wipe every chat** this device is part of (retried automatically if the phone was offline).
 - Every device has its own **8-character code**. A friend enters it under Join and the two of you share a private chat (max 2 people).
 - **End-to-end encrypted:** each device has an ECDH P-256 key pair. The two devices derive a shared AES-256-GCM key (HKDF, salted with the chat code). Text, photos, voice, video and file names are encrypted on the phone; the server only relays ciphertext. A **safety number** (tap the chat title) can be compared with your friend to detect a man-in-the-middle.
 - **Secret message signal** (Settings, on by default). A secret app must not show open notifications, so the front screen is the signal: **every game title is maroon when nothing is waiting and turns green when a friend's message is waiting.** It turns maroon again once you open that chat. While the app is open (even locked) it keeps a light "inbox" connection; the server sends only a content-free ping (who + time), and a freshly opened app is told about the newest waiting message. Inside the unlocked area a small in-app banner also appears. There are no system notifications.

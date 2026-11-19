@@ -1,6 +1,6 @@
 # Play Store listing (draft)
 
-**Title (30):** Mini Games + Private Chat
+**Title (30):** Gamaroon: Games + Private Chat
 **Short description (80):** Six classic games with a hidden, end-to-end encrypted private chat.
 
 **Full description**

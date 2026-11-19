@@ -22,7 +22,7 @@ export default function Setup({ onDone }) {
   return (
     <div className="page center">
       <form className="card" onSubmit={submit}>
-        <h2>Mini Games</h2>
+        <h2>Gamaroon</h2>
         <p className="muted">Create your player profile to save scores and progress.</p>
         <input placeholder="Player name" value={name} maxLength={24}
           onChange={(e) => setName(e.target.value)} autoFocus />

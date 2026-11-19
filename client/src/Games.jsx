@@ -88,7 +88,7 @@ export default function Games({ onCode, passLen, signal }) {
   return (
     <div className="gamewrap themed hubwrap">
       <div className="game">
-        <GameHeader title="Mini Games" signal={signal} onPin={() => setPinOpen(true)} />
+        <GameHeader title="Gamaroon" signal={signal} onPin={() => setPinOpen(true)} />
         <p className="hubsub">Pick a game to play</p>
         <div className={`hubgrid ${GAMES.length > 6 ? 'three' : ''}`}>
           {GAMES.map((g) => (
