@@ -1,0 +1,9 @@
+**/node_modules
+client
+docs
+deploy
+.git
+.claude
+*.apk
+server/test.mjs
+server/remote-test.mjs

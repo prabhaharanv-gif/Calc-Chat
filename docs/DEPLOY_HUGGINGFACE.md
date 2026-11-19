@@ -1,4 +1,8 @@
-# Free hosting on Hugging Face Spaces (no card needed)
+# Hugging Face Spaces (Docker)
+
+> **Not free any more.** As of November 2026 Hugging Face only allows **Static** Spaces for free; **Docker** and Gradio
+> Spaces need a paid plan (PRO). Static Spaces cannot run this Node/WebSocket server. Use `DEPLOY.md` (VPS or Oracle
+> Always Free) instead, or keep this guide only if you subscribe to PRO.
 
 Good for **testing and the Play Store closed test**. Move to a small VPS (see `DEPLOY.md`) before a real public
 release: free Spaces can go to sleep, and Hugging Face does not intend Spaces to be production backends.

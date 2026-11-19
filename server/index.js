@@ -364,6 +364,13 @@ setInterval(() => {
   for (const [k, list] of connHits) if (!list.some((t) => now - t < 60000)) connHits.delete(k);
 }, SWEEP_MS).unref();
 
+// Health check for hosting platforms (no data, nothing about rooms). 503 while the server is shutting down.
+let shuttingDown = false;
+app.get('/healthz', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.status(shuttingDown ? 503 : 200).json({ ok: !shuttingDown });
+});
+
 // Public privacy policy (needed by app stores). PRIVACY_EMAIL sets the contact address shown on the page.
 const PRIVACY_EMAIL = process.env.PRIVACY_EMAIL || 'support@example.com';
 const PRIVACY_DATE = process.env.PRIVACY_DATE || 'November 2026';
@@ -384,3 +391,15 @@ if (fs.existsSync(dist)) {
 }
 
 server.listen(PORT, process.env.HOST || '0.0.0.0', () => console.log(`Calc Chat server on http://localhost:${PORT}`));
+
+// Graceful shutdown (platform restarts / redeploys send SIGTERM): stop taking new connections, close the sockets so
+// the apps reconnect to the new instance, then exit. Rooms live in RAM only, so they end with the process by design.
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal}: shutting down`);
+  io.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 8000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

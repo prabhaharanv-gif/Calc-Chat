@@ -3,6 +3,7 @@ import { io } from 'socket.io-client';
 import { SERVER } from './config.js';
 import { post } from './api.js';
 import { getIdentity } from './identity.js';
+import { rejoinGuest } from './rejoin.js';
 
 // Keeps one light "inbox" connection per chat room (own code + joined code) while the app is open,
 // even when it is locked. The server sends only a tiny ping ("someone sent a message"), never content.
@@ -39,6 +40,11 @@ export function useInbox(profile, armed, onPing, onFriend) {
               await post('/api/host', { code: r.code, secret: r.secret, pub: id?.pubJson });
               setTimeout(() => { if (!dead) s.connect(); }, 500);
             } catch { /* offline: socket.io keeps retrying other errors */ }
+          } else if (r.role === 'guest' && (e.message === 'no_room' || e.message === 'forbidden')) {
+            // server restarted: join again with the same code + secret (or wait until the owner re-opens the room)
+            const j = await rejoinGuest({ code: r.code, secret: r.secret, pub: id?.pubJson });
+            if (j === 'ok') setTimeout(() => { if (!dead) s.connect(); }, 500);
+            else if (j === 'wait') setTimeout(() => { if (!dead) s.connect(); }, 5000);
           }
         });
         sockets.push(s);

@@ -6,6 +6,7 @@ import Icon from './Icon.jsx';
 import { deriveKey, encryptBytes, decryptBytes, encText, decText, safetyNumber } from './e2e.js';
 import { getIdentity } from './identity.js';
 import { load, save } from './storage.js';
+import { rejoinGuest } from './rejoin.js';
 
 const MAX_FILE = 25 * 1024 * 1024;
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -97,14 +98,24 @@ export default function Chat({ role, code, secret, name, hidden = false, onBack,
       const id = await getIdentity();
       if (dead) return;
       if (!id) { setError('Secure chat needs HTTPS or the Android app.'); return; }
+      const sendMeta = async () => {
+        if (!box.key) return;
+        try { s.emit('meta', await encText(box.key, name || '', { min: 64, max: 200 })); } catch { /* ignore */ }
+      };
       s = io(SERVER || undefined, { auth: { code, secret, pub: id.pubJson, hidden } });
       sock.current = s;
 
-      s.on('connect', () => { setStatus('online'); setError(''); });
+      s.on('connect', () => { setStatus('online'); setError(''); sendMeta(); }); // the server forgets our encrypted name when it restarts
       s.on('disconnect', () => setStatus('offline'));
       s.on('connect_error', async (e) => {
         if (e.message === 'no_room' && role === 'owner') {
           try { await post('/api/host', { code, secret, pub: id.pubJson }); setTimeout(() => s.connect(), 300); return; } catch { /* fall through */ }
+        }
+        if (role === 'guest' && (e.message === 'no_room' || e.message === 'forbidden')) {
+          // The server restarted and forgot the room: join again (same code + secret), or wait for the owner to re-open it.
+          const r = await rejoinGuest({ code, secret, pub: id.pubJson });
+          if (r === 'ok') { setTimeout(() => { if (!dead) s.connect(); }, 300); return; }
+          if (r === 'wait') { setError('Reconnecting...'); setStatus('offline'); setTimeout(() => { if (!dead) s.connect(); }, 5000); return; }
         }
         if (e.message === 'no_room') setError('Chat not available yet. Ask the owner to open the app.');
         else if (e.message === 'forbidden') setError('You no longer have access to this chat.');
@@ -172,7 +183,7 @@ export default function Chat({ role, code, secret, name, hidden = false, onBack,
         setKeyChange(false);
         setReady(true);
         box.waiters.splice(0).forEach((r) => r());
-        try { s.emit('meta', await encText(k, name || '', { min: 64, max: 200 })); } catch { /* ignore */ }
+        await sendMeta();
         await refreshPeerName();
       };
       box.activate = activate;

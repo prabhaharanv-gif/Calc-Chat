@@ -117,24 +117,28 @@ public class WatcherService extends Service {
         s.on(Socket.EVENT_CONNECT_ERROR, args -> {
             // Server restarted and forgot our room: the owner registers it again, then reconnects.
             String msg = args.length > 0 ? String.valueOf(args[0]) : "";
-            if (msg.contains("no_room") && "owner".equals(role)) {
+            boolean ownerLost = msg.contains("no_room") && "owner".equals(role);
+            // A guest whose room was forgotten joins again with the same code + secret.
+            boolean guestLost = "guest".equals(role) && (msg.contains("no_room") || msg.contains("forbidden"));
+            if (ownerLost || guestLost) {
                 new Thread(() -> {
                     try {
                         JSONObject body = new JSONObject();
                         body.put("code", code);
                         body.put("secret", secret);
                         body.put("pub", room.optString("pub"));
-                        HttpURLConnection c = (HttpURLConnection) new URL(server + "/api/host").openConnection();
+                        HttpURLConnection c = (HttpURLConnection) new URL(server + (ownerLost ? "/api/host" : "/api/join")).openConnection();
                         c.setRequestMethod("POST");
                         c.setRequestProperty("Content-Type", "application/json");
                         c.setDoOutput(true);
                         try (OutputStream os = c.getOutputStream()) {
                             os.write(body.toString().getBytes(StandardCharsets.UTF_8));
                         }
-                        c.getResponseCode();
+                        int status = c.getResponseCode();
                         c.disconnect();
-                        Thread.sleep(500);
-                        s.connect();
+                        // owner not back yet (404): try again in a few seconds
+                        Thread.sleep(guestLost && status == 404 ? 5000 : 500);
+                        if (!(guestLost && status == 409)) s.connect();
                     } catch (Exception ignored) { }
                 }).start();
             }
