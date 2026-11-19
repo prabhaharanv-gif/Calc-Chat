@@ -6,9 +6,11 @@ import { getIdentity } from './identity.js';
 
 // Keeps one light "inbox" connection per chat room (own code + joined code) while the app is open,
 // even when it is locked. The server sends only a tiny ping ("someone sent a message"), never content.
-export function useInbox(profile, armed, onPing) {
+export function useInbox(profile, armed, onPing, onFriend) {
   const cb = useRef(onPing);
   cb.current = onPing;
+  const fcb = useRef(onFriend);
+  fcb.current = onFriend;
   const joinedCode = profile.joined?.code;
   const joinedSecret = profile.joined?.secret;
 
@@ -23,15 +25,18 @@ export function useInbox(profile, armed, onPing) {
       if (joinedCode) rooms.push({ role: 'guest', code: joinedCode, secret: joinedSecret });
       for (const r of rooms) {
         const s = io(SERVER || undefined, {
-          auth: { code: r.code, secret: r.secret, name: profile.name, pub: id?.pubJson, inbox: true },
+          auth: { code: r.code, secret: r.secret, pub: id?.pubJson, inbox: true },
         });
         s.on('ping', (p) => {
           if (p?.from !== r.role) cb.current({ role: r.role, name: p?.name, time: p?.time, replay: p?.replay === true });
         });
+        // Is the friend inside this chat right now? (owner room -> the guest, joined room -> the owner)
+        s.on('presence', (p) => fcb.current?.(r.role, !!(r.role === 'owner' ? p?.guest : p?.owner)));
+        s.on('disconnect', () => fcb.current?.(r.role, false));
         s.on('connect_error', async (e) => {
           if (e.message === 'no_room' && r.role === 'owner') {
             try {
-              await post('/api/host', { code: r.code, secret: r.secret, name: profile.name, pub: id?.pubJson });
+              await post('/api/host', { code: r.code, secret: r.secret, pub: id?.pubJson });
               setTimeout(() => { if (!dead) s.connect(); }, 500);
             } catch { /* offline: socket.io keeps retrying other errors */ }
           }
@@ -40,5 +45,5 @@ export function useInbox(profile, armed, onPing) {
       }
     })();
     return () => { dead = true; sockets.forEach((s) => s.disconnect()); };
-  }, [armed, profile.ownCode, profile.ownSecret, joinedCode, joinedSecret, profile.name]);
+  }, [armed, profile.ownCode, profile.ownSecret, joinedCode, joinedSecret]);
 }

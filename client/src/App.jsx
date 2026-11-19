@@ -3,25 +3,26 @@ import Games from './Games.jsx';
 import Setup from './Setup.jsx';
 import Home from './Home.jsx';
 import { post } from './api.js';
-import { sha256 } from './sha256.js';
+import { verifyPin } from './pinhash.js';
 import { initProfile, load, save } from './storage.js';
 import { useScreenGuard } from './useScreenGuard.js';
 import { useInbox } from './useInbox.js';
 import Icon from './Icon.jsx';
+import { OnlineContext } from './OnlineContext.js';
+import { SERVER } from './config.js';
+import { getIdentity, resetIdentity } from './identity.js';
+import { startWatcher, stopWatcher, wipeWatcher } from './watcher.js';
+import { serial, beginAttempt, finishAttempt, silentWipe, flushQueue, readQueue } from './autowipe.js';
 
-const FOUR_HOURS = 4 * 60 * 60 * 1000;
+const WAIT_WINDOW = 30 * 60 * 1000;
 
 export default function App() {
   const [profile, setProfile] = useState(initProfile);
   const [unlocked, setUnlocked] = useState(false);
-  const [notice, setNotice] = useState(null); // in-app banner (only inside the unlocked area)
-  const [jump, setJump] = useState(null); // asks Home to open a chat (from the banner)
   const [pings, setPings] = useState({ owner: 0, guest: 0 }); // time of the newest message from the friend, per chat
-  const [leaving, setLeaving] = useState(false); // the game screen fades out while the chat opens
   const hidden = useScreenGuard();
   const unlockedRef = useRef(false);
   const activeRoom = useRef(null); // which chat is open right now ('owner' | 'guest' | null)
-  const noticeTimer = useRef(null);
   useEffect(() => { unlockedRef.current = unlocked; }, [unlocked]);
 
   const update = useCallback((patch) => setProfile(save(patch)), []);
@@ -35,20 +36,34 @@ export default function App() {
   // ---- secret "message waiting" signal ----
   // The inbox keeps listening (even before unlock). When a friend's message is newer than the last one
   // you opened, the front screen shows a green title. Content is never involved.
-  const onPing = useCallback(({ role, name, time, replay }) => {
+  // Only the title colour changes: no banner or any other notification.
+  const onPing = useCallback(({ role, time }) => {
     setPings((p) => ({ ...p, [role]: Math.max(p[role] || 0, time || Date.now()) }));
-    if (replay || load().notify === false) return;
-    if (unlockedRef.current && !document.hidden && activeRoom.current !== role) {
-      setNotice({ role, name });
-      clearTimeout(noticeTimer.current);
-      noticeTimer.current = setTimeout(() => setNotice(null), 6000);
-    }
   }, []);
-  useInbox(profile, !!profile.passHash, onPing);
+  const [friendOn, setFriendOn] = useState({ owner: false, guest: false }); // is the friend inside the chat right now?
+  const [chatOpen, setChatOpen] = useState(false); // the chat box itself is on screen (no Online button there)
+  const onFriend = useCallback((role, on) => setFriendOn((f) => (f[role] === on ? f : { ...f, [role]: on })), []);
+  useInbox(profile, !!profile.passHash, onPing, onFriend);
+
+  // Android: keep the background watcher running so a generic game notification can appear while the app is closed.
+  const notifyOn = profile.notify !== false;
+  useEffect(() => {
+    if (!profile.passHash || !notifyOn || !SERVER) { stopWatcher(); return; }
+    let dead = false;
+    (async () => {
+      const id = await getIdentity();
+      if (dead) return;
+      const rooms = [{ role: 'owner', code: profile.ownCode, secret: profile.ownSecret, pub: id?.pubJson }];
+      if (profile.joined) rooms.push({ role: 'guest', code: profile.joined.code, secret: profile.joined.secret });
+      startWatcher({ server: SERVER, rooms });
+    })();
+    return () => { dead = true; };
+  }, [profile.passHash, notifyOn, profile.ownCode, profile.ownSecret, profile.joined?.code, profile.joined?.secret]);
+  const online = friendOn.owner || (!!profile.joined && friendOn.guest);
+  useEffect(() => { if (!unlocked) setChatOpen(false); }, [unlocked]);
   // A new code / a different friend starts fresh.
   useEffect(() => { setPings((p) => ({ ...p, owner: 0 })); }, [profile.ownCode]);
   useEffect(() => { setPings((p) => ({ ...p, guest: 0 })); }, [profile.joined?.code]);
-  useEffect(() => { if (!unlocked) setNotice(null); }, [unlocked]);
 
   // The chat screen calls this when it shows the friend's newest message.
   const markSeen = useCallback((role, time) => {
@@ -57,62 +72,50 @@ export default function App() {
     setProfile(save({ seen: { ...seen, [role]: time } }));
   }, []);
 
-  const waiting = (role) => Date.now() - pings[role] < FOUR_HOURS && pings[role] > (profile.seen?.[role] || 0);
+  const waiting = (role) => Date.now() - pings[role] < WAIT_WINDOW && pings[role] > (profile.seen?.[role] || 0);
   const signal = profile.notify !== false && (waiting('owner') || (!!profile.joined && waiting('guest')));
 
-  const openFromNotice = () => {
-    if (notice) setJump({ role: notice.role, id: Date.now() });
-    setNotice(null);
-  };
 
-  // Delete all messages of every chat this device is part of (both sides).
-  const wipeAll = useCallback(async () => {
-    const p = load();
-    const targets = [];
-    if (p.ownCode) targets.push({ code: p.ownCode, secret: p.ownSecret });
-    if (p.joined) targets.push(p.joined);
-    let failed = false;
-    for (const t of targets) {
-      try {
-        const r = await post('/api/wipe', t);
-        if (!r.ok && r.status !== 404 && r.status !== 403) failed = true;
-      } catch { failed = true; }
-    }
-    save({ pendingWipe: failed }); // retry later if the server was unreachable
+  // Server deletions that are still waiting for the server's confirmation (after a silent auto-wipe) are retried
+  // at start, when the network comes back and every minute. Nothing is shown to the user.
+  useEffect(() => {
+    const retry = () => { if (readQueue().length) flushQueue(post); };
+    retry();
+    const t = setInterval(retry, 60000);
+    window.addEventListener('online', retry);
+    return () => { clearInterval(t); window.removeEventListener('online', retry); };
   }, []);
 
-  useEffect(() => {
-    const retry = () => { if (load().pendingWipe) wipeAll(); };
-    retry();
-    window.addEventListener('online', retry);
-    return () => window.removeEventListener('online', retry);
-  }, [wipeAll]);
-
-  // Called by the hidden PIN pad (opened by holding a game title for 3 seconds).
-  const onCode = useCallback(async (digits, opts) => {
+  // Called by the hidden PIN pad (opened by holding a game title). Attempts run one at a time; 3 wrong in a row
+  // trigger the silent auto-wipe (if it is switched on in Settings): no alert, then the app restarts at first-time setup.
+  const onCode = useCallback((digits, opts) => serial(async () => {
     const p = load();
-    // Every PIN-pad submit counts as an attempt; wrong ones are tallied and 3 in a row wipe the chats.
-    if (digits.length !== p.passLen && !opts?.explicit) return 'ignore';
-    if (sha256(`${p.salt}:${digits}`) === p.passHash) {
-      save({ fails: 0 });
-      // Smooth hand-over: the PIN pad plays its unlock animation, the game fades out, then the chat area fades in.
-      setLeaving(true);
-      setTimeout(() => { setUnlocked(true); setLeaving(false); }, 450);
+    if (opts?.bypass) { // only honoured when the passcode lock is switched off in Settings
+      if (p.pinOn !== false) return 'wrong';
+      setUnlocked(true); // opens straight away, no transition
       return 'unlock';
     }
-    const fails = (p.fails || 0) + 1;
-    if (fails >= 3) {
-      save({ fails: 0, pendingWipe: true });
-      wipeAll();
-    } else save({ fails });
+    if (digits.length !== p.passLen && !opts?.explicit) return 'ignore';
+    const tries = await beginAttempt(); // counted before the check, so it cannot be dodged
+    const { ok, upgrade } = await verifyPin(p, digits);
+    if (ok && upgrade) save({ passHash: upgrade }); // old weak hash -> strong hash
+    const r = await finishAttempt(ok, tries);
+    if (r === 'ok') {
+      setUnlocked(true); // opens straight away, no transition
+      return 'unlock';
+    }
+    if (r === 'wipe') {
+      await silentWipe({ post, nativeWipe: wipeWatcher, resetIdentity });
+      window.location.reload();
+    }
     return 'wrong';
-  }, [wipeAll]);
+  }), []);
 
   let screen;
   if (!profile.passHash) screen = <Setup onDone={update} />;
   else if (!unlocked) {
     screen = (
-      <div className={`front ${leaving ? 'leaving' : ''}`}>
+      <div className="front">
         <Games onCode={onCode} passLen={profile.passLen} signal={signal} />
       </div>
     );
@@ -120,24 +123,15 @@ export default function App() {
     screen = (
       <div className="homein">
         <Home profile={profile} update={update} onLock={() => setUnlocked(false)} theme={theme} onTheme={toggleTheme}
-          activeRoom={activeRoom} jump={jump} onSeen={markSeen} />
+          activeRoom={activeRoom} onSeen={markSeen} onView={(v) => setChatOpen(!!v)} />
       </div>
     );
   }
 
   return (
-    <>
+    <OnlineContext.Provider value={online}>
       {screen}
-      {notice && unlocked && (
-        <div className="notice" role="alert" onClick={openFromNotice}>
-          <span className="notice-i"><Icon name="message" size={18} /></span>
-          <span className="grow"><b>{notice.name || 'Friend'}</b><small>New message</small></span>
-          <button className="notice-x" aria-label="Dismiss" onClick={(e) => { e.stopPropagation(); setNotice(null); }}>
-            <Icon name="x" size={16} />
-          </button>
-        </div>
-      )}
       {hidden && unlocked && <div className="shield" />}
-    </>
+    </OnlineContext.Provider>
   );
 }
