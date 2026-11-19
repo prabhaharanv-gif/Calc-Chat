@@ -1,0 +1,28 @@
+[Unit]
+Description=Gamaroon chat relay (RAM only, no database)
+After=network.target
+
+[Service]
+Type=simple
+User=gamaroon
+Group=gamaroon
+WorkingDirectory=/opt/gamaroon/server
+Environment=NODE_ENV=production
+Environment=PORT=4000
+Environment=HOST=127.0.0.1
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=2
+
+# the server writes nothing to disk, so it can run fully locked down
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=700M
+
+[Install]
+WantedBy=multi-user.target

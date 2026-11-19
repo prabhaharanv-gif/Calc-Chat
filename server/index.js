@@ -371,4 +371,4 @@ if (fs.existsSync(dist)) {
   app.get('*', (_req, res) => res.sendFile(path.join(dist, 'index.html')));
 }
 
-server.listen(PORT, () => console.log(`Calc Chat server on http://localhost:${PORT}`));
+server.listen(PORT, process.env.HOST || '0.0.0.0', () => console.log(`Calc Chat server on http://localhost:${PORT}`));
