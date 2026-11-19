@@ -4,14 +4,19 @@ Nothing in the application was rewritten for this: same Node.js + Socket.IO serv
 30-minute expiry, pairing and deletion logic. The repo only gained a `Dockerfile`, a `/healthz` endpoint, graceful
 shutdown, and automatic guest re-join after a server restart.
 
-## What the free plan gives (checked on <https://northflank.com/pricing>, Nov 2026)
+## What the free plan gives (what actually happened on Nov 19 2026)
 
-- "No card needed", 2 services, 2 jobs, 1 database, "up to $20/mo of resources", always on (no sleeping).
-- Northflank's docs describe the free plan as not meant for production. Use it for the Play Store **closed test**;
-  keep a paid/other host in mind for a public launch.
-- Third-party sites disagree about whether a card is asked at sign-up. **If Northflank asks for a payment method, stop.**
-  Do not add one without deciding to; the free route is then closed.
-- Egress/bandwidth limits are not stated on the page. Watch **Billing / Usage** after the first day.
+- Developer Sandbox: 2 services, 2 jobs, 1 addon, **one free project with limited resources**. Free platform plan.
+- The pricing page says "No card needed", but the service form asked for a **card to verify the account and prevent
+  abuse** before it allowed the free project. A card was added for verification only; the plan stays Developer Sandbox
+  (never press **Upgrade**).
+- New accounts start on **Pay as you go**. To get the free project: delete any project created during onboarding,
+  then **Billing -> Plans -> Developer Sandbox -> Downgrade**, then **Create free project**.
+- Free projects can only use **US - Central** or **Europe - West (London)**. London is the closest to India.
+- Smallest compute plan (`nf-compute-10`: 0.1 vCPU, 256 MB) is enough for text chats; use `nf-compute-20` if you expect
+  many photo/video messages (they are held in RAM).
+- Northflank's docs describe the free plan as not meant for production. Fine for the Play Store closed test.
+- Bandwidth limits are not stated; watch **Billing / Usage**.
 
 ## Environment variables
 
@@ -28,7 +33,7 @@ No secrets are needed: the server has no API keys, tokens or database credential
 ## Steps
 
 1. <https://northflank.com> -> **Sign up** with GitHub. **Stop if a card is requested.**
-2. Create a **project** (region closest to you; the free plan has a single cloud provider).
+2. Make sure the team is on **Developer Sandbox** (see above), then **Create free project** in **Europe - West (London).
 3. **Create new -> Service -> Combined (build + deploy)**.
    - Repository: `prabhaharanv-gif/Calc-Chat` (private: authorise the Northflank GitHub app for this one repository).
    - Branch: `main`. Build type: **Dockerfile**, Dockerfile path `/Dockerfile`, build context `/`.
